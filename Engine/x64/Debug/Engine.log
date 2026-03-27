@@ -1,0 +1,9 @@
+﻿  Engine.cpp
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(459,51): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(577,29): warning C4244: 'initializing': conversion from '_Ty' to 'int', possible loss of data
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(577,29): warning C4244:         with
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(577,29): warning C4244:         [
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(577,29): warning C4244:             _Ty=SOCKET
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(577,29): warning C4244:         ]
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(75,1): warning C4715: 'ConnectionHandler::handleClientRequest': not all control paths return a value
+  Engine.vcxproj -> D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.exe
