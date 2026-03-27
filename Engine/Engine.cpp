@@ -8,183 +8,134 @@
 #include <unordered_map>
 #include "GeneralEntities/BufferQueue.h"
 #include "GeneralEntities/HttpContext.h"
+#include "Networking/SocketUtils.h"
+using namespace std;
 
-struct RequestTask {
-    socket_t client_socket;
-    char* buffer;
-    size_t buffer_size;
-    bool is_ssl;
-    SSL* ssl_ptr;
-};
-
-class FrameworkEngine {
+class WebServerEngine {
 private:
-    BufferQueue<RequestTask> request_tasks;
-    unordered_set<socket_t> abandoned_sockets;
-    unordered_map<socket_t, http_request*> current_processing_requests;
-    std::thread worker_thread;
-    std::atomic<bool> running;
-    mutex engine_mutex;
+    socket_t httpListenSock;
+    socket_t httpsListenSock;
+    unordered_map<socket_t , http_client*> clients;
+    unordered_map<socket_t, char*> client_req_messages;
+    fd_set readfds;
+    SSL_CTX* sslCtx;
 
-    void processingLoop() {
-        while (true) {
-            RequestTask task = request_tasks.dequeue();
-            if (task.buffer == nullptr) {
-                cout << "[Error] Dequeued a task with a null buffer!" << endl;
-                continue;
-            }
-            // 1. & 2. PARSE & CALL C# 
-            // (Assumed: http_request* req = parser.parse(task.buffer);)
-            cout << task.buffer << endl;
-
-            // 3. CHECK DISCONNECTION BEFORE SENDING
-            bool isAbandoned = false;
-            {
-                std::lock_guard<std::mutex> lock(engine_mutex);
-                if (abandoned_sockets.count(task.client_socket)) {
-                    isAbandoned = true;
-                    abandoned_sockets.erase(task.client_socket);
-                }
-            }
-
-            if (!isAbandoned) {
-                const char* response =
-                    "HTTP/1.1 200 OK\r\n"
-                    "Content-Length: 2\r\n"
-                    "Content-Type: text/plain\r\n"
-                    "Connection: close\r\n"
-                    "\r\n"
-                    "OK";
-
-                if (task.is_ssl) {
-                    SSL_write(task.ssl_ptr, response, (int)strlen(response));
-                }
-                else {
-                    send(task.client_socket, response, (int)strlen(response), 0);
-                }
-            }
-
-            // 4. CLEAN UP EVERYTHING
-            // Since you put http_request in heap, delete it here
-            // delete task.meta_ptr; 
-            free(task.buffer);
-
-            if (task.is_ssl && task.ssl_ptr) {
-                SSL_shutdown(task.ssl_ptr);
-                SSL_free(task.ssl_ptr);
-            }
-            CLOSE_SOCKET(task.client_socket);
+    int handleClientRequest(http_client& client) {
+        if (client_req_messages.find(client.socket) == client_req_messages.end()) {
+            client_req_messages[client.socket] = (char*)malloc(client.bufferSize);
+            client.bytesRead = 0;
         }
-    }
 
-    void start() {
-        if (running) return;
-        running = true;
-        worker_thread = std::thread(&FrameworkEngine::processingLoop, this);
-    }
-    void stop() {
-        if (!running) return;
-        running = false;
-        RequestTask stop_signal = { 0 };
-        request_tasks.enqueue(stop_signal);
+        char* basePtr = client_req_messages[client.socket];
+        char* writePtr = basePtr + client.bytesRead;
+        size_t remainingSpace = client.bufferSize - client.bytesRead - 1;
 
-        if (worker_thread.joinable()) {
-            worker_thread.join();
-        }
-    }
-public:
-    FrameworkEngine() : running(false) {
-        start();
-    }
-
-    ~FrameworkEngine() {
-        stop();
-    }
-
-    void forwardRequest(RequestTask message) {
-        request_tasks.enqueue(message);
-    }
-    void markSocketDisconnected(socket_t sock) {
-        lock_guard<std::mutex> lock(engine_mutex);
-        abandoned_sockets.insert(sock);
-    }
-};
-
-class ConnectionHandler {
-private:
-    socket_t http;
-    socket_t https;
-    unordered_map<socket_t , ClientInfo>* clients;
-    fd_set* readfds;
-    FrameworkEngine* framework_engine;
-    bool handleClientRequest(ClientInfo& client) {
-        //char buffer[4096];
-        char* writePtr = client.buffer + client.bytesRead;
-        size_t remainingSpace = client.bufferSize - client.bytesRead;
-        const char* response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Length: 2\r\n"
-            "Content-Type: text/plain\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "OK";
         int bytes = 0;
-        if (client.ssl != nullptr) {
-            bytes = SSL_read(client.ssl, writePtr, (int)remainingSpace);
-        }
-        else{
-            bytes = recv(client.socket, writePtr, (int)remainingSpace, 0);
-        }
-        if (bytes <= 0) {
-            cout << "[DISC] Client on port " << client.localPort << " disconnected." << endl;
-            framework_engine->markSocketDisconnected(client.socket);
-            return false;
-        }
+        if (client.ssl) bytes = SSL_read(client.ssl, writePtr, (int)remainingSpace);
+        else bytes = recv(client.socket, writePtr, (int)remainingSpace, 0);
+
+        if (bytes <= 0) return 0;
+
         client.bytesRead += bytes;
-        client.buffer[client.bytesRead] = '\0';
-        if (strstr(client.buffer, "\r\n\r\n")) {
-            RequestTask task;
-            task.client_socket = client.socket;
-            task.buffer = client.buffer;
-            task.buffer_size = client.bytesRead;
-            task.is_ssl = (client.ssl != nullptr);
-            task.ssl_ptr = client.ssl;
-            client.buffer = nullptr;
-            framework_engine->forwardRequest(task);
-            return false;
+        basePtr[client.bytesRead] = '\0';
+		
+        const char* headerEnd = strstr(basePtr, "\r\n\r\n");
+
+        if (headerEnd) {
+            cout << "Request complete or headers finished." << endl;
+            return 1;
         }
-        return true;
+        else {
+            cout << "Request incomplete, waiting for more packets..." << endl;
+            return 2;
+        }
+
+		return 1;
+    }
+    
+    bool handleClientResponse(http_client& client, char* res) {
+
+    }
+    
+    void handleEventLoop() {
+        for (auto it = clients.begin(); it != clients.end(); ) {
+			cout << "Checking client on port " << it->second->socket << " for activity..." << endl;
+            socket_t fd = it->first;
+            http_client* ci = it->second;
+            bool disconnected = false;
+            if (FD_ISSET(fd, &readfds)) {
+                if (ci->state == STATE_HANDSHAKING) {
+                    int ret = SSL_accept(ci->ssl);
+                    if (ret == 1) {
+                        ci->state = STATE_CONNECTED;
+                        cout << "[SSL] Handshake completed for client." << endl;
+                        ++it;
+                    }
+                    else {
+                        int err = SSL_get_error(ci->ssl, ret);
+                        if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
+                            cout << "[SSL] Handshake failed, closing." << endl;
+                            SSL_free(ci->ssl);
+                            CLOSE_SOCKET(fd);
+                            it = clients.erase(it);
+                        }
+                        else {
+                            ++it;
+                        }
+                    }
+                    continue;
+                }
+                
+                else {
+                    if (handleClientRequest(*ci) <= 0) {
+                        disconnected = true;
+                    }
+                }
+            }
+            
+            if (disconnected) {
+                if (client_req_messages.count(fd)) {
+                    free(client_req_messages[fd]);
+                    client_req_messages.erase(fd);
+                }
+                if (ci->ssl) SSL_free(ci->ssl);
+                CLOSE_SOCKET(fd);
+                delete ci;
+                it = clients.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
     }
 
-public:
     void handleNewConnection(socket_t listenSock, int port, SSL_CTX* sslCtx) {
-        if (FD_ISSET(listenSock, readfds)) {
+        if (FD_ISSET(listenSock, &readfds)) {
             socket_t newSock = accept(listenSock, NULL, NULL);
-            ClientInfo ci;
-            ci.socket = newSock;
-            ci.localPort = port;
-            ci.bufferSize = 8192;
-            ci.buffer = (char*)malloc(ci.bufferSize);
-            ci.bytesRead = 0;
+            http_client* ci = new http_client;
+            ci->socket = newSock;
+            ci->localPort = port;
+            ci->bufferSize = 8192;
+            ci->bytesRead = 0;
             if (newSock != INVALID_SOCKET) {
-                if (listenSock == http) {
-                    ci.ssl = nullptr;
-                    ci.state = STATE_CONNECTED;
+                if (listenSock == httpListenSock) {
+                    ci->ssl = nullptr;
+                    ci->state = STATE_CONNECTED;
                     setNonBlocking(newSock);
 
                     cout << "[CONN] New client on port " << port
-                        << ". Total clients: " << clients->size() << endl;
+                        << ". Total clients: " << clients.size() << endl;
                 }
 
-                if (listenSock == https) {
+                if (listenSock == httpsListenSock) {
                     SSL* ssl = SSL_new(sslCtx);
                     SSL_set_fd(ssl, (int)newSock);
                     setNonBlocking(newSock);
-                    ci.ssl = ssl;
-                    ci.state = STATE_HANDSHAKING;
+                    ci->ssl = ssl;
+                    ci->state = STATE_HANDSHAKING;
                     int ret = SSL_accept(ssl);
                     if (ret == 1) {
-                        ci.state = STATE_CONNECTED;
+                        ci->state = STATE_CONNECTED;
                     }
                     else {
                         int err = SSL_get_error(ssl, ret);
@@ -196,72 +147,12 @@ public:
                         }
                     }
                 }
-                
-                clients->insert({ newSock, ci });
+                clients.insert({ newSock, ci });
             }
             else
                 cout << "[CONN] Invalid Socket" << endl;
         }
     }
-
-    void handleEventLoop() {
-        for (auto it = clients->begin(); it != clients->end(); ) {
-            socket_t fd = it->first;
-            ClientInfo& ci = it->second;
-
-            if (FD_ISSET(fd, readfds)) {
-                if (ci.state == STATE_HANDSHAKING) {
-                    int ret = SSL_accept(ci.ssl);
-                    if (ret == 1) {
-                        ci.state = STATE_CONNECTED;
-                        cout << "[SSL] Handshake completed for client." << endl;
-                        ++it;
-                    }
-                    else {
-                        int err = SSL_get_error(ci.ssl, ret);
-                        if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
-                            cout << "[SSL] Handshake failed, closing." << endl;
-                            SSL_free(ci.ssl);
-                            CLOSE_SOCKET(fd);
-                            it = clients->erase(it);
-                        }
-                        else {
-                            ++it;
-                        }
-                    }
-                    continue;
-                }
-                bool keepAlive = handleClientRequest(ci);
-
-                if (!keepAlive) {
-                    it = clients->erase(it);
-                    continue;
-                }
-            }
-            
-            if (it != clients->end())
-                ++it;
-        }
-    }
-
-    ConnectionHandler(unordered_map<socket_t,ClientInfo>* cInfos, fd_set* globalSet, socket_t forHttp, socket_t forHttps) {
-        clients = cInfos;
-        readfds = globalSet;
-        http = forHttp;
-        https = forHttps;
-        framework_engine = new FrameworkEngine();
-    }
-};
-
-
-class WebServerEngine {
-private:
-    socket_t httpListenSock;
-    socket_t httpsListenSock;
-    unordered_map<socket_t , ClientInfo> clients;
-    fd_set readfds;
-    SSL_CTX* sslCtx;
-    ConnectionHandler* connectionHandler = NULL;
 
     void initOpenSsl() {
         SSL_library_init();
@@ -312,11 +203,11 @@ private:
             }
 
             // 1. Check for new connections and tag them with the correct port
-            connectionHandler->handleNewConnection(httpListenSock, HTTP_DEFAULT_PORT, sslCtx);
-            connectionHandler->handleNewConnection(httpsListenSock, HTTPS_DEFAULT_PORT, sslCtx);
+            handleNewConnection(httpListenSock, HTTP_DEFAULT_PORT, sslCtx);
+            handleNewConnection(httpsListenSock, HTTPS_DEFAULT_PORT, sslCtx);
 
             // 2. Handle IO for existing clients
-            connectionHandler->handleEventLoop();
+            handleEventLoop();
         }
     }
 
@@ -330,7 +221,7 @@ private:
         serverAddr.sin_addr.s_addr = INADDR_ANY;
         serverAddr.sin_port = htons(port);
 
-        if (bind(sock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
+        if (::bind(sock, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) {
             CLOSE_SOCKET(sock);
             return INVALID_SOCKET;
         }
@@ -348,7 +239,7 @@ public:
             cerr << "[FATAL] Failed to initialize listening sockets." << endl;
             return;
         }
-        connectionHandler = new ConnectionHandler(&clients, &readfds, httpListenSock, httpsListenSock);
+
         initOpenSsl();
         runServer();
     }
@@ -360,15 +251,13 @@ public:
             CLOSE_SOCKET(client.first);
         }
         cleanUpSockets();
-        delete connectionHandler;
+
     }
 };
 
 int main() {
     try {
         WebServerEngine server;
-        int x;
-        cin >> x;
     }
     catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
@@ -386,3 +275,90 @@ int main() {
 //std::cout << host->send(d1) << std::endl;
 //std::cout << host->send(d2) << std::endl;
 //std::cout << host->send(d3) << std::endl;
+
+/*
+        const char* response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 2\r\n"
+            "Content-Type: text/plain\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "OK";
+
+        char* writePtr = client.buffer + client.bytesRead;
+        size_t remainingSpace = client.bufferSize - client.bytesRead;
+
+        int bytes = 0;
+        if (client.ssl != nullptr) {
+            bytes = SSL_read(client.ssl, writePtr, (int)remainingSpace);
+        }
+        else{
+            bytes = recv(client.socket, writePtr, (int)remainingSpace, 0);
+        }
+        if (bytes <= 0) {
+            cout << "[DISC] Client on port " << client.localPort << " disconnected." << endl;
+            framework_engine->markSocketDisconnected(client.socket);
+            return false;
+        }
+        client.bytesRead += bytes;
+        client.buffer[client.bytesRead] = '\0';
+        if (strstr(client.buffer, "\r\n\r\n")) {
+            client.state = STATE_PROCESSING;
+            framework_engine->forwardRequest(&client);
+        }
+        return true;
+
+
+                        if (ci.state == STATE_HANDSHAKING) {
+                    int ret = SSL_accept(ci.ssl);
+                    if (ret == 1) {
+                        ci.state = STATE_CONNECTED;
+                        cout << "[SSL] Handshake completed for client." << endl;
+                        ++it;
+                    }
+                    else {
+                        int err = SSL_get_error(ci.ssl, ret);
+                        if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
+                            cout << "[SSL] Handshake failed, closing." << endl;
+                            SSL_free(ci.ssl);
+                            CLOSE_SOCKET(fd);
+                            it = clients->erase(it);
+                        }
+                        else {
+                            ++it;
+                        }
+                    }
+                    continue;
+                }
+
+                bool keepAlive = handleClientRequest(ci);
+
+                if (!keepAlive) {
+                    if(ci.buffer != nullptr)
+                        free(ci.buffer);
+                    if (ci.ssl)
+                        SSL_free(ci.ssl);
+                    CLOSE_SOCKET(fd);
+                    it = clients->erase(it);
+                    if (it == clients->end()) break;
+                }
+            }
+
+            if (it != clients->end())
+                ++it;
+
+                        std::lock_guard<std::mutex> lock(map_mutex);
+        if (clients->count(sock)) {
+            ClientInfo& ci = clients->at(sock);
+            if (ci.ssl != nullptr) {
+                SSL_write(ci.ssl, response, (int)strlen(response));
+            }
+            else {
+                send(ci.socket, response, (int)strlen(response), 0);
+            }
+
+            ci.bytesRead = 0;
+            memset(ci.buffer, 0, ci.bufferSize);
+            ci.state = STATE_CONNECTED;
+        }
+*/
