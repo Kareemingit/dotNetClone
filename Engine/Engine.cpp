@@ -43,6 +43,14 @@ private:
 
         if (headerEnd) {
             cout << "Request complete or headers finished." << endl;
+            const char* response =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Length: 2\r\n"
+                "Content-Type: text/plain\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "OK";
+			handleClientResponse(client, (char*)response);
             return 1;
         }
         else {
@@ -53,8 +61,18 @@ private:
 		return 1;
     }
     
-    bool handleClientResponse(http_client& client, char* res) {
-
+    bool handleClientResponse(http_client& client, char* response) {
+        if (client.ssl) {
+            SSL_write(client.ssl, response, (int)strlen(response));
+        }
+        else {
+            send(client.socket, response, (int)strlen(response), 0);
+        }
+        if (client_req_messages.count(client.socket)) {
+            free(client_req_messages[client.socket]);
+            client_req_messages.erase(client.socket);
+        }
+		return true;
     }
     
     void handleEventLoop() {
@@ -143,14 +161,17 @@ private:
                             SSL_free(ssl);
                             CLOSE_SOCKET(newSock);
                             cout << "[CONN] Handshake failed: Actual error, clean up" << endl;
+                            delete ci;
                             return;
                         }
                     }
                 }
                 clients.insert({ newSock, ci });
             }
-            else
+            else {
                 cout << "[CONN] Invalid Socket" << endl;
+                delete ci;
+            }
         }
     }
 
