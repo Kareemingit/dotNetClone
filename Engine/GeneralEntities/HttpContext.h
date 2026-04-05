@@ -7,6 +7,8 @@ extern "C" {
 #include <openssl/applink.c>
 }
 #endif // _WIN32
+
+using namespace std;
 struct MyData {
     int id;
     float value;

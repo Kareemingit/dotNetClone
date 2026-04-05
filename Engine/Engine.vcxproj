@@ -138,6 +138,7 @@
     <ClInclude Include="GeneralEntities\HttpContext.h" />
     <ClInclude Include="Networking\HttpParser.h" />
     <ClInclude Include="Networking\SocketUtils.h" />
+    <ClInclude Include="Networking\Transport.h" />
     <ClInclude Include="runtime_host\HostManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
