@@ -1,15 +1,41 @@
 #pragma once
-
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include "..\Networking\SocketUtils.h"
+#ifdef _WIN32
+extern "C" {
+#include <openssl/applink.c>
+}
+#endif // _WIN32
 struct MyData {
     int id;
     float value;
     char message[256];
 };
 
+
+enum ClientState {
+    STATE_HANDSHAKING,
+    STATE_CONNECTED,
+    STATE_DISCONNECTED,
+    STATE_PROCESSING
+};
+
+struct http_client {
+    socket_t socket;
+    int localPort;
+    SSL* ssl = nullptr;
+    ClientState state = STATE_CONNECTED;
+    size_t bufferSize = 0;
+    size_t bytesRead = 0;
+};
+
+
+
 #pragma pack(push , 1)
 struct http_request {
     // 64-bit pointers/handles first (8 bytes)
-    void* buffer_raw_ptr;// The heap-allocated raw HTTP string
+    std::vector<char> buffer_raw_ptr;// The heap-allocated raw HTTP string
     uintptr_t client_socket;// Use uintptr_t for cross-platform socket handles
 
     // 32-bit offsets (4 bytes)
@@ -36,3 +62,8 @@ struct http_request {
     } headers[32];
 };
 #pragma pack(pop)
+
+struct http_response {
+    void* buffer_raw_ptr;
+    uintptr_t client_socket;
+};

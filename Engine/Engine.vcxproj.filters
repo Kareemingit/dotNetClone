@@ -26,9 +26,6 @@
     <ClInclude Include="GeneralEntities\HttpContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Networking\ConnectionHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Networking\SocketUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>

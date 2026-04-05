@@ -1,8 +1,9 @@
 ﻿  Engine.cpp
      Creating library D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.lib and object D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.exp
   Generating code
-  3 of 653 functions ( 0.5%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    1 functions had inline decision re-evaluated but remain unchanged
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(128): warning C4715: 'WebServerEngine::handleClientResponse': not all control paths return a value
+  12 of 817 functions ( 1.5%) were compiled, the rest were copied from previous compilation.
+    2 functions were new in current compilation
+    16 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Engine.vcxproj -> D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.exe
