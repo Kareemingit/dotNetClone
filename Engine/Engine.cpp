@@ -5,6 +5,7 @@
 #include <thread>
 #include <unordered_set>
 #include <unordered_map>
+#include <chrono>
 #include "GeneralEntities/BufferQueue.h"
 #include "GeneralEntities/HttpContext.h"
 #include "Networking/SocketUtils.h"
@@ -16,6 +17,120 @@ struct Dispatcher {
     BufferQueue<http_response*> responseQueue;
 };
 
+enum HttpMethod {
+    HTTP_GET = 1,
+    HTTP_POST,
+    HTTP_PUT,
+    HTTP_DELETE,
+    HTTP_HEAD,
+    HTTP_OPTIONS,
+    HTTP_PATCH,
+    HTTP_TRACE,
+    HTTP_CONNECT
+};
+
+enum ParseState {
+    PARSE_METHOD,
+    PARSE_URI,
+    PARSE_VERSION,
+    PARSE_DONE,
+    PARSE_ERROR
+};
+
+class HttpParser {
+private:
+    static inline uint8_t detectMethod(const char* data, uint16_t len) {
+        switch (len) {
+        case 3:
+            if (data[0] == 'G' && data[1] == 'E' && data[2] == 'T') return HTTP_GET;
+            if (data[0] == 'P' && data[1] == 'U' && data[2] == 'T') return HTTP_PUT;
+            break;
+        case 4:
+            if (memcmp(data, "POST", 4) == 0) return HTTP_POST;
+            if (memcmp(data, "HEAD", 4) == 0) return HTTP_HEAD;
+            break;
+        case 5:
+            if (memcmp(data, "PATCH", 5) == 0) return HTTP_PATCH;
+            if (memcmp(data, "TRACE", 5) == 0) return HTTP_TRACE;
+            break;
+        case 6:
+            if (memcmp(data, "DELETE", 6) == 0) return HTTP_DELETE;
+            break;
+        case 7:
+            if (memcmp(data, "OPTIONS", 7) == 0) return HTTP_OPTIONS;
+            if (memcmp(data, "CONNECT", 7) == 0) return HTTP_CONNECT;
+            break;
+        }
+        return 255;
+    }
+
+    static int parseFirstLine(http_request* req) {
+        const char* data = req->buffer_raw_ptr.data();
+        size_t len = req->buffer_raw_ptr.size();
+        size_t i = 0;
+        size_t token_start = 0;
+        ParseState state = PARSE_METHOD;
+        while (i < len) {
+            char c = data[i];
+            switch (state) {
+            case PARSE_METHOD:
+                if (c == ' ') {
+                    req->method_offset = token_start;
+                    req->method_len = (uint16_t)(i - token_start);
+                    req->method_id = detectMethod(data + token_start, req->method_len);
+                    token_start = i + 1;
+                    state = PARSE_URI;
+                }
+                break;
+            case PARSE_URI:
+                if (c == ' ') {
+                    req->uri_offset = (uint32_t)token_start;
+                    req->uri_len = (uint32_t)(i - token_start);
+                    token_start = i + 1;
+                    state = PARSE_VERSION;
+                }
+                break;
+            case PARSE_VERSION:
+                if (c == '\r') {
+                    if (i + 1 >= len || data[i + 1] != '\n') {
+                        state = PARSE_ERROR;
+                        break;
+                    }
+                    size_t vlen = i - token_start;
+                    if (vlen >= 8 && memcmp(data + token_start, "HTTP/", 5) == 0) {
+                        req->version_major = data[token_start + 5] - '0';
+                        req->version_minor = data[token_start + 7] - '0';
+                    }
+                    state = PARSE_DONE;
+                    i++;
+                }
+                break;
+            case PARSE_DONE:
+                return PARSE_DONE;
+            case PARSE_ERROR:
+                return PARSE_ERROR;
+            }
+            i++;
+        }
+	}
+
+    static int parseHeaders(http_request* req) {
+        return 0;
+	}
+public:
+    static void parseRequest(http_request* req) {
+		int firstLineState = parseFirstLine(req);
+        if(firstLineState == PARSE_ERROR) {
+            cerr << "[ERROR] Failed to parse request." << endl;
+            return;
+		}
+		int headerState = parseHeaders(req);
+        if (headerState == PARSE_ERROR) {
+            cerr << "[ERROR] Failed to parse headers." << endl;
+            return;
+        }
+    }
+};
 
 class FrameworkEngine {
 private:
@@ -26,9 +141,13 @@ private:
     void processQueue() {
         while (running) {
 			http_request* req = buffer.requestQueue.dequeue();
+			/*cout << endl << "--------------------------------------------------------------" << endl;
             for(char c : req->buffer_raw_ptr) {
                 cout << c;
 			}
+            cout << endl << "--------------------------------------------------------------" << endl;*/
+
+            //HttpParser::parseRequest(req);
             const char* response =
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Length: 2\r\n"
@@ -54,7 +173,6 @@ public:
             workerThread.join();
         }
     }
-    
 };
 
 class WebServerEngine {
@@ -75,9 +193,8 @@ private:
             client_req_messages[client.socket] = vector<char>(client.bufferSize);
             client.bytesRead = 0;
         }
-
-        char* basePtr = &client_req_messages[client.socket][0];
-        char* writePtr = basePtr + client.bytesRead;
+		auto& vec = client_req_messages[client.socket];
+        char* writePtr = &vec[client.bytesRead];
         size_t remainingSpace = client.bufferSize - client.bytesRead - 1;
 
 		int bytes = transport.receiveFromClient(&client, writePtr, remainingSpace);
@@ -85,16 +202,16 @@ private:
         if (bytes <= 0) return 0;
 
         client.bytesRead += bytes;
-        basePtr[client.bytesRead] = '\0';
+        vec[client.bytesRead] = '\0';
 		
-        const char* headerEnd = strstr(basePtr, "\r\n\r\n");
+        const char* headerEnd = strstr(&vec[0], "\r\n\r\n");
 
         if (headerEnd) {
             cout << "Request complete or headers finished." << endl;
-            vector<char> fullRequest = std::move(client_req_messages[client.socket]);
+            vec.resize(client.bytesRead);
             http_request* req = new http_request;
             req->client_socket = (uintptr_t)client.socket;
-            req->buffer_raw_ptr = std::move(fullRequest);
+            req->buffer_raw_ptr = std::move(vec);
             buffer.requestQueue.enqueue(req);
             cout << "[Framework] Request enqueued from socket " << client.socket << endl;
             client_req_messages.erase(client.socket);
@@ -108,7 +225,7 @@ private:
 		return 1;
     }
     
-    bool handleClientResponse() {
+    void handleClientResponse() {
         while (running)
         {
             http_response* resp = buffer.responseQueue.dequeue();
@@ -132,14 +249,12 @@ private:
             bool disconnected = false;
             if (FD_ISSET(fd, &readfds) || FD_ISSET(fd, &writefds)) {
                 if (ci->state == STATE_HANDSHAKING) {
-                    if (!transport.handshakeClient(ci)) {
+					int hsResult = transport.handshakeClient(ci);
+                    if (hsResult == 0) {
                         cout << "[SSL] Handshake failed, closing." << endl;
                         transport.freeClientResources(ci);
                         it = clients.erase(it);
 					}
-                    else {
-                        ++it;
-                    }
                     continue;
                 }
                 else {
@@ -182,22 +297,18 @@ private:
         FD_ZERO(&readfds);
 		FD_ZERO(&writefds);
 
-        // Add listening sockets to the set 
         FD_SET(httpListenSock, &readfds);
         FD_SET(httpsListenSock, &readfds);
 
-        // Add client sockets to the set 
         for (const auto& client : clients) {
             socket_t fd = client.first;
             http_client* ci = client.second;
 
             if (ci->state == STATE_HANDSHAKING) {
-                // During handshake, we might be waiting for either
                 FD_SET(fd, &readfds);
                 FD_SET(fd, &writefds);
             }
             else {
-                // Normal connected state: wait for request data
                 FD_SET(fd, &readfds);
             }
         }
@@ -282,55 +393,59 @@ public:
     }
 };
 
+
+void printRequest(http_request* req) {
+    const vector<char>& raw = req->buffer_raw_ptr;
+
+    cout << "---- Parsed Request ----\n";
+
+    cout << "Method: ";
+    if (req->method_len > 0)
+        cout.write(&raw[req->method_offset], req->method_len);
+    cout << " (ID=" << (int)req->method_id << ")\n";
+
+    cout << "URI: ";
+    if (req->uri_len > 0)
+        cout.write(&raw[req->uri_offset], req->uri_len);
+    cout << "\n";
+
+    cout << "Version: HTTP/"
+        << (int)req->version_major << "."
+        << (int)req->version_minor << "\n";
+
+    cout << "------------------------\n\n";
+}
+
 int main() {
     try {
-        Dispatcher ReqResbuffer;
+        /*Dispatcher ReqResbuffer;
         FrameworkEngine framework(ReqResbuffer);
-        WebServerEngine server(ReqResbuffer);
+        WebServerEngine server(ReqResbuffer);*/
+
+        cout << "Test 1: Full Browser Request\n";
+
+        vector<char> vec1 = {
+            'D','E','L' ,'E' , 'T' , 'E' ,' ','/','a','/','v','e','r','y','/','l','o','n','g','/','p','a','t','h',' ',
+            'H','T','T','P','/','1','.','1','\r','\n',
+            '\r','\n'
+        };
+
+        http_request* req = new http_request{};
+        req->buffer_raw_ptr = std::move(vec1);
+		cout << "parser 1" << endl;
+        auto start = std::chrono::high_resolution_clock::now();
+        HttpParser::parseRequest(req);
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "Elapsed time: " << elapsed.count() << " seconds\n";
+        printRequest(req);
+
     }
     catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
     return 0;
 }
-
-/*
-if (clients.find(clientSock) == clients.end())
-            return false;
-        http_client* client = clients[clientSock];
-        if (client->ssl) {
-            SSL_write(client->ssl, response, (int)strlen(response));
-        }
-        else {
-            send(client->socket, response, (int)strlen(response), 0);
-        }
-        if (client_req_messages.count(client->socket)) {
-            client_req_messages.erase(client->socket);
-        }
-        ---------------------------------
-                int bytes = 0;
-        if (client.ssl) bytes = SSL_read(client.ssl, writePtr, (int)remainingSpace);
-        else bytes = recv(client.socket, writePtr, (int)remainingSpace, 0);
-*/
-
-//int ret = SSL_accept(ci->ssl);
-//if (ret == 1) {
-//    ci->state = STATE_CONNECTED;
-//    cout << "[SSL] Handshake completed for client." << endl;
-//    ++it;
-//}
-//else {
-//    int err = SSL_get_error(ci->ssl, ret);
-//    if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
-//        cout << "[SSL] Handshake failed, closing." << endl;
-//        SSL_free(ci->ssl);
-//        CLOSE_SOCKET(fd);
-//        it = clients.erase(it);
-//    }
-//    else {
-//        ++it;
-//    }
-//}
 
 //cout << "Starting ProxyServer..." << endl;
 //WebServerEngine server;
@@ -351,81 +466,60 @@ if (clients.find(clientSock) == clients.end())
             "Connection: close\r\n"
             "\r\n"
             "OK";
+*/
 
-        char* writePtr = client.buffer + client.bytesRead;
-        size_t remainingSpace = client.bufferSize - client.bytesRead;
+/*
 
-        int bytes = 0;
-        if (client.ssl != nullptr) {
-            bytes = SSL_read(client.ssl, writePtr, (int)remainingSpace);
-        }
-        else{
-            bytes = recv(client.socket, writePtr, (int)remainingSpace, 0);
-        }
-        if (bytes <= 0) {
-            cout << "[DISC] Client on port " << client.localPort << " disconnected." << endl;
-            framework_engine->markSocketDisconnected(client.socket);
-            return false;
-        }
-        client.bytesRead += bytes;
-        client.buffer[client.bytesRead] = '\0';
-        if (strstr(client.buffer, "\r\n\r\n")) {
-            client.state = STATE_PROCESSING;
-            framework_engine->forwardRequest(&client);
-        }
-        return true;
+        vector<char> vec = {
+    'G','E','T',' ','/',' ','H','T','T','P','/','1','.','1','\r','\n',
 
+    'H','o','s','t',':',' ','l','o','c','a','l','h','o','s','t','\r','\n',
+    'C','o','n','n','e','c','t','i','o','n',':',' ','k','e','e','p','-','a','l','i','v','e','\r','\n',
 
-                        if (ci.state == STATE_HANDSHAKING) {
-                    int ret = SSL_accept(ci.ssl);
-                    if (ret == 1) {
-                        ci.state = STATE_CONNECTED;
-                        cout << "[SSL] Handshake completed for client." << endl;
-                        ++it;
-                    }
-                    else {
-                        int err = SSL_get_error(ci.ssl, ret);
-                        if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
-                            cout << "[SSL] Handshake failed, closing." << endl;
-                            SSL_free(ci.ssl);
-                            CLOSE_SOCKET(fd);
-                            it = clients->erase(it);
-                        }
-                        else {
-                            ++it;
-                        }
-                    }
-                    continue;
-                }
+    's','e','c','-','c','h','-','u','a',':',' ','"','N','o','t',':','A','-','B','r','a','n','d','"',';','v','=','"','9','9','"',',',' ',
+    '"','G','o','o','g','l','e',' ','C','h','r','o','m','e','"',';','v','=','"','1','4','5','"',',',' ',
+    '"','C','h','r','o','m','i','u','m','"',';','v','=','"','1','4','5','"','\r','\n',
 
-                bool keepAlive = handleClientRequest(ci);
+    's','e','c','-','c','h','-','u','a','-','m','o','b','i','l','e',':',' ','?','0','\r','\n',
+    's','e','c','-','c','h','-','u','a','-','p','l','a','t','f','o','r','m',':',' ','"','W','i','n','d','o','w','s','"','\r','\n',
 
-                if (!keepAlive) {
-                    if(ci.buffer != nullptr)
-                        free(ci.buffer);
-                    if (ci.ssl)
-                        SSL_free(ci.ssl);
-                    CLOSE_SOCKET(fd);
-                    it = clients->erase(it);
-                    if (it == clients->end()) break;
-                }
-            }
+    'U','p','g','r','a','d','e','-','I','n','s','e','c','u','r','e','-','R','e','q','u','e','s','t','s',':',' ','1','\r','\n',
 
-            if (it != clients->end())
-                ++it;
+    'U','s','e','r','-','A','g','e','n','t',':',' ',
+    'M','o','z','i','l','l','a','/','5','.','0',' ',
+    '(','W','i','n','d','o','w','s',' ','N','T',' ','1','0','.','0',';',' ','W','i','n','6','4',';',' ','x','6','4',')',' ',
+    'A','p','p','l','e','W','e','b','K','i','t','/','5','3','7','.','3','6',' ',
+    '(','K','H','T','M','L',',',' ','l','i','k','e',' ','G','e','c','k','o',')',' ',
+    'C','h','r','o','m','e','/','1','4','5','.','0','.','0','.','0',' ',
+    'S','a','f','a','r','i','/','5','3','7','.','3','6','\r','\n',
 
-                        std::lock_guard<std::mutex> lock(map_mutex);
-        if (clients->count(sock)) {
-            ClientInfo& ci = clients->at(sock);
-            if (ci.ssl != nullptr) {
-                SSL_write(ci.ssl, response, (int)strlen(response));
-            }
-            else {
-                send(ci.socket, response, (int)strlen(response), 0);
-            }
+    'S','e','c','-','P','u','r','p','o','s','e',':',' ','p','r','e','f','e','t','c','h',';','p','r','e','r','e','n','d','e','r','\r','\n',
 
-            ci.bytesRead = 0;
-            memset(ci.buffer, 0, ci.bufferSize);
-            ci.state = STATE_CONNECTED;
-        }
+    'A','c','c','e','p','t',':',' ',
+    't','e','x','t','/','h','t','m','l',',',
+    'a','p','p','l','i','c','a','t','i','o','n','/','x','h','t','m','l','+','x','m','l',',',
+    'a','p','p','l','i','c','a','t','i','o','n','/','x','m','l',';','q','=','0','.','9',',',
+    'i','m','a','g','e','/','a','v','i','f',',',
+    'i','m','a','g','e','/','w','e','b','p',',',
+    'i','m','a','g','e','/','a','p','n','g',',',
+    '*','/','*',';','q','=','0','.','8',',',
+    'a','p','p','l','i','c','a','t','i','o','n','/','s','i','g','n','e','d','-','e','x','c','h','a','n','g','e',';','v','=','b','3',';','q','=','0','.','7','\r','\n',
+
+    'S','e','c','-','F','e','t','c','h','-','S','i','t','e',':',' ','n','o','n','e','\r','\n',
+    'S','e','c','-','F','e','t','c','h','-','M','o','d','e',':',' ','n','a','v','i','g','a','t','e','\r','\n',
+    'S','e','c','-','F','e','t','c','h','-','U','s','e','r',':',' ','?','1','\r','\n',
+    'S','e','c','-','F','e','t','c','h','-','D','e','s','t',':',' ','d','o','c','u','m','e','n','t','\r','\n',
+
+    'A','c','c','e','p','t','-','E','n','c','o','d','i','n','g',':',' ',
+    'g','z','i','p',',',' ','d','e','f','l','a','t','e',',',' ','b','r',',',' ','z','s','t','d','\r','\n',
+
+    'A','c','c','e','p','t','-','L','a','n','g','u','a','g','e',':',' ',
+    'e','n','-','U','S',',',
+    'e','n',';','q','=','0','.','9',',',
+    'p','t',';','q','=','0','.','8',',',
+    't','r',';','q','=','0','.','7',',',
+    'a','r',';','q','=','0','.','6','\r','\n',
+
+    '\r','\n'
+        };
 */

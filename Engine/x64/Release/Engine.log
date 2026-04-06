@@ -1,9 +1,9 @@
 ﻿  Engine.cpp
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(78,42): warning C4267: '=': conversion from 'size_t' to 'uint16_t', possible loss of data
      Creating library D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.lib and object D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.exp
   Generating code
-D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(125): warning C4715: 'WebServerEngine::handleClientResponse': not all control paths return a value
-  15 of 823 functions ( 1.8%) were compiled, the rest were copied from previous compilation.
-    0 functions were new in current compilation
-    2 functions had inline decision re-evaluated but remain unchanged
+  Previous IPDB and IOBJ mismatch, fall back to full compilation.
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(115): warning C4715: 'HttpParser::parseFirstLine': not all control paths return a value
+  All 390 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
   Finished generating code
   Engine.vcxproj -> D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.exe

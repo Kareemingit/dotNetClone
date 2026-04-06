@@ -42,25 +42,18 @@ public:
         CLOSE_SOCKET(ci->socket);
     }
 
-    bool handshakeClient(http_client* ci) {
-        if (ci->ssl) {
-            int ret = SSL_accept(ci->ssl);
-            if (ret == 1) {
-                ci->state = STATE_CONNECTED;
-                cout << "[SSL] Handshake completed for client." << endl;
-            }
-            else {
-                int err = SSL_get_error(ci->ssl, ret);
-                if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE) {
-                    cout << "[SSL] Handshake failed, closing." << endl;
-                    return false;
-                }
-                else {
-                    return true;
-                }
-            }
+    int handshakeClient(http_client* ci) {
+        if (!ci->ssl) return 1;
+        int ret = SSL_accept(ci->ssl);
+        if (ret == 1) {
+            ci->state = STATE_CONNECTED;
+            return 1;
         }
-        return true;
+        int err = SSL_get_error(ci->ssl, ret);
+        if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE) {
+            return 2;
+        }
+        return 0;
     }
 
     bool acceptClient(http_client* ci, socket_t newSock, int port, socket_t listenSock) {
