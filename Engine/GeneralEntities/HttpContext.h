@@ -7,6 +7,7 @@ extern "C" {
 #include <openssl/applink.c>
 }
 #endif // _WIN32
+#define HEADER_MAX_COUNT 32
 
 using namespace std;
 struct MyData {
@@ -61,7 +62,7 @@ struct http_request {
         uint32_t name_len;
         uint32_t value_offset;
         uint32_t value_len;
-    } headers[32];
+    } headers[HEADER_MAX_COUNT];
 };
 #pragma pack(pop)
 

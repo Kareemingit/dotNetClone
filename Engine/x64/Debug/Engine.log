@@ -1,36 +1,6 @@
 ﻿  Engine.cpp
-     Creating library D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.lib and object D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.exp
-libcpmtd.lib(StlCompareStringA.obj) : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(StlLCMapStringA.obj) : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(wlocale.obj) : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(xlocale.obj) : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(xwcsxfrm.obj) : error LNK2001: unresolved external symbol _free_dbg
-Engine.obj : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(locale0.obj) : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(cerr.obj) : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(locale.obj) : error LNK2001: unresolved external symbol _free_dbg
-libcpmtd.lib(StlCompareStringA.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(StlLCMapStringA.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(wlocale.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(xlocale.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(xwcsxfrm.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-Engine.obj : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(locale0.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(cerr.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(locale.obj) : error LNK2001: unresolved external symbol _malloc_dbg
-libcpmtd.lib(xlocale.obj) : error LNK2019: unresolved external symbol _CrtDbgReport referenced in function "private: void __cdecl std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >::_Construct<1,char const *>(char const * const,unsigned __int64)" (??$_Construct@$00PEBD@?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@AEAAXQEBD_K@Z)
-Engine.obj : error LNK2001: unresolved external symbol _CrtDbgReport
-libcpmtd.lib(cerr.obj) : error LNK2001: unresolved external symbol _CrtDbgReport
-libcpmtd.lib(locale.obj) : error LNK2001: unresolved external symbol _CrtDbgReport
-libcpmtd.lib(wlocale.obj) : error LNK2001: unresolved external symbol _CrtDbgReport
-libcpmtd.lib(_tolower.obj) : error LNK2019: unresolved external symbol _calloc_dbg referenced in function _Getctype
-libcpmtd.lib(locale.obj) : error LNK2001: unresolved external symbol _calloc_dbg
-libcpmtd.lib(wlocale.obj) : error LNK2001: unresolved external symbol _calloc_dbg
-libcpmtd.lib(xlocale.obj) : error LNK2001: unresolved external symbol _calloc_dbg
-libcpmtd.lib(_tolower.obj) : error LNK2019: unresolved external symbol _wcsdup_dbg referenced in function _Getctype
-libcpmtd.lib(xstrcoll.obj) : error LNK2001: unresolved external symbol _wcsdup_dbg
-libcpmtd.lib(locale.obj) : error LNK2019: unresolved external symbol _realloc_dbg referenced in function "private: static void __cdecl std::locale::_Locimp::_Locimp_Addfac(class std::locale::_Locimp *,class std::locale::facet *,unsigned __int64)" (?_Locimp_Addfac@_Locimp@locale@std@@CAXPEAV123@PEAVfacet@23@_K@Z)
-libcpmtd.lib(StlLCMapStringA.obj) : error LNK2019: unresolved external symbol _CrtDbgReportW referenced in function _freea_crt
-libcpmtd.lib(xmbtowc.obj) : error LNK2001: unresolved external symbol _CrtDbgReportW
-libcpmtd.lib(StlCompareStringA.obj) : error LNK2001: unresolved external symbol _CrtDbgReportW
-D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.exe : fatal error LNK1120: 7 unresolved externals
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Networking\HttpParser.h(67,42): warning C4267: '=': conversion from 'size_t' to 'uint16_t', possible loss of data
+  (compiling source file 'Engine.cpp')
+  
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Networking\HttpParser.h(105,1): warning C4715: 'HttpParser::parseFirstLine': not all control paths return a value
+  Engine.vcxproj -> D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.exe
