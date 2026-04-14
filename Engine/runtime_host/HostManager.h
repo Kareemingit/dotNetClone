@@ -114,8 +114,10 @@ public:
         std::cout << "--- Framework Host Manager Started ---" << std::endl;
     }
 
-    char* send(MyData data) {
-        return (char*)request_handler(&data);
+    char* send(http_request* data) {
+        if (!data) return nullptr;
+        // Pass the pointer directly to C#
+        return (char*)request_handler(data);
     }
 
     ~HostManager() {

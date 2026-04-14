@@ -1,10 +1,11 @@
 ﻿  Engine.cpp
-D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(80,42): warning C4267: '=': conversion from 'size_t' to 'uint16_t', possible loss of data
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Networking\HttpParser.h(67,42): warning C4267: '=': conversion from 'size_t' to 'uint16_t', possible loss of data
+  (compiling source file 'Engine.cpp')
+  
      Creating library D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.lib and object D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.exp
   Generating code
-D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Engine.cpp(118): warning C4715: 'HttpParser::parseFirstLine': not all control paths return a value
-  271 of 416 functions (65.1%) were compiled, the rest were copied from previous compilation.
-    48 functions were new in current compilation
-    4 functions had inline decision re-evaluated but remain unchanged
+  73 of 957 functions ( 7.6%) were compiled, the rest were copied from previous compilation.
+    7 functions were new in current compilation
+    41 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
   Engine.vcxproj -> D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Release\Engine.exe

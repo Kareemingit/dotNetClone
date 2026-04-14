@@ -115,6 +115,11 @@ private:
             char c = data[i];
             switch (state) {
             case PARSE_HEADER_KEY:
+                if (c == '\r' && i + 1 < len && data[i + 1] == '\n') {
+                    req->num_headers = header_index;
+                    req->body_start_offset = (uint32_t)(i + 2);
+                    return PARSE_DONE;
+                }
                 if (c == ':') {
                     req->headers[header_index].name_offset = (uint32_t)token_start;
                     req->headers[header_index].name_len = (uint32_t)(i - token_start);
@@ -138,7 +143,6 @@ private:
             }
             i++;
         }
-        req->num_headers = header_index;
         return PARSE_DONE;
     }
 public:
@@ -187,6 +191,17 @@ public:
             if (header.value_len > 0)
                 cout.write(&raw[header.value_offset], header.value_len);
             cout << "\n";
+        }
+		int body_len = (int)(raw.size() - req->body_start_offset);
+        if (body_len > 0) {
+            for(char c : string(&raw[req->body_start_offset], body_len)) {
+                if (isprint(c) || c == '\n' || c == '\r') {
+                    cout << c;
+                }
+                else {
+                    cout << "\\x" << hex << (int)(unsigned char)c << dec;
+                }
+			}
         }
     }
 };

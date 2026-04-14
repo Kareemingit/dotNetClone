@@ -10,6 +10,7 @@
 #include "Networking/SocketUtils.h"
 #include "Networking/Transport.h"
 #include "Networking/HttpParser.h"
+#include "runtime_host/HostManager.h"
 using namespace std;
 
 struct Dispatcher {
@@ -20,16 +21,18 @@ struct Dispatcher {
 
 class FrameworkEngine {
 private:
-    thread workerThread;
+    vector<thread> workerThreads;
     bool running;
+	const int THREAD_COUNT = 10;
     Dispatcher& buffer;
-
-    void processQueue() {
+	HostManager hostManager;
+    void processRequestQueue() {
         while (running) {
 			http_request* req = buffer.requestQueue.dequeue();
 			HttpParser::parseRequest(req);
 			cout << endl << "--------------------------------------------------------------" << endl;
-			HttpParser::printRequest(req);
+			//HttpParser::printRequest(req);
+			cout << hostManager.send(req) << endl;
             cout << endl << "--------------------------------------------------------------" << endl;
             const char* response =
                 "HTTP/1.1 200 OK\r\n"
@@ -43,17 +46,23 @@ private:
             resp->buffer_raw_ptr = (void*)response;
 			buffer.responseQueue.enqueue(resp);
 			cout << "\n[Framework] Processing request from socket " << req->client_socket << endl;
+			delete req;
         }
     }
 public:
     FrameworkEngine(Dispatcher& buff) : buffer(buff), running(true) {
-        workerThread = std::thread(&FrameworkEngine::processQueue, this);
+        workerThreads = vector<thread>(THREAD_COUNT);
+        for (auto& each_thread : workerThreads) {
+            each_thread = thread(&FrameworkEngine::processRequestQueue, this);
+        }
+		hostManager = HostManager();
     }
 
     ~FrameworkEngine() {
         running = false;
-        if (workerThread.joinable()) {
-            workerThread.join();
+        for (auto& each_thread : workerThreads) {
+            if (each_thread.joinable())
+                each_thread.join();
         }
     }
 };
@@ -121,6 +130,7 @@ private:
             if (client_req_messages.count(client->socket)) {
                 client_req_messages.erase(client->socket);
             }
+			delete resp;
         }
     }
     
@@ -279,10 +289,58 @@ public:
 
 int main() {
     try {
-        Dispatcher ReqResbuffer;
-        FrameworkEngine framework(ReqResbuffer);
-        WebServerEngine server(ReqResbuffer);
+        //Dispatcher ReqResbuffer;
+        //FrameworkEngine framework(ReqResbuffer);
+        //WebServerEngine server(ReqResbuffer);
+        
 
+
+        cout << "Starting ProxyServer..." << endl;
+        vector<char> vec = {
+     'G','E','T',' ','/',' ','H','T','T','P','/','1','.','1','\r','\n',
+     'H','o','s','t',':',' ','l','o','c','a','l','h','o','s','t','\r','\n',
+     'C','o','n','n','e','c','t','i','o','n',':',' ','k','e','e','p','-','a','l','i','v','e','\r','\n',
+     's','e','c','-','c','h','-','u','a',':',' ','"','N','o','t',':','A','-','B','r','a','n','d','"',';','v','=','"','9','9','"',',',' ',
+     '"','G','o','o','g','l','e',' ','C','h','r','o','m','e','"',';','v','=','"','1','4','5','"',',',' ',
+     '"','C','h','r','o','m','i','u','m','"',';','v','=','"','1','4','5','"','\r','\n',
+     's','e','c','-','c','h','-','u','a','-','m','o','b','i','l','e',':',' ','?','0','\r','\n',
+     's','e','c','-','c','h','-','u','a','-','p','l','a','t','f','o','r','m',':',' ','"','W','i','n','d','o','w','s','"','\r','\n',
+     'U','p','g','r','a','d','e','-','I','n','s','e','c','u','r','e','-','R','e','q','u','e','s','t','s',':',' ','1','\r','\n',
+     'U','s','e','r','-','A','g','e','n','t',':',' ',
+     'M','o','z','i','l','l','a','/','5','.','0',' ',
+     '(','W','i','n','d','o','w','s',' ','N','T',' ','1','0','.','0',';',' ','W','i','n','6','4',';',' ','x','6','4',')',' ',
+     'A','p','p','l','e','W','e','b','K','i','t','/','5','3','7','.','3','6',' ',
+     '(','K','H','T','M','L',',',' ','l','i','k','e',' ','G','e','c','k','o',')',' ',
+     'C','h','r','o','m','e','/','1','4','5','.','0','.','0','.','0',' ',
+     'S','a','f','a','r','i','/','5','3','7','.','3','6','\r','\n',
+     'S','e','c','-','P','u','r','p','o','s','e',':',' ','p','r','e','f','e','t','c','h',';','p','r','e','r','e','n','d','e','r','\r','\n',
+     'A','c','c','e','p','t',':',' ',
+     't','e','x','t','/','h','t','m','l',',',
+     'a','p','p','l','i','c','a','t','i','o','n','/','x','h','t','m','l','+','x','m','l',',',
+     'a','p','p','l','i','c','a','t','i','o','n','/','x','m','l',';','q','=','0','.','9',',',
+     'i','m','a','g','e','/','a','v','i','f',',',
+     'i','m','a','g','e','/','w','e','b','p',',',
+     'i','m','a','g','e','/','a','p','n','g',',',
+     '*','/','*',';','q','=','0','.','8',',',
+     'a','p','p','l','i','c','a','t','i','o','n','/','s','i','g','n','e','d','-','e','x','c','h','a','n','g','e',';','v','=','b','3',';','q','=','0','.','7','\r','\n',
+     'S','e','c','-','F','e','t','c','h','-','S','i','t','e',':',' ','n','o','n','e','\r','\n',
+     'S','e','c','-','F','e','t','c','h','-','M','o','d','e',':',' ','n','a','v','i','g','a','t','e','\r','\n',
+     'S','e','c','-','F','e','t','c','h','-','U','s','e','r',':',' ','?','1','\r','\n',
+     'S','e','c','-','F','e','t','c','h','-','D','e','s','t',':',' ','d','o','c','u','m','e','n','t','\r','\n',
+     'A','c','c','e','p','t','-','E','n','c','o','d','i','n','g',':',' ',
+     'g','z','i','p',',',' ','d','e','f','l','a','t','e',',',' ','b','r',',',' ','z','s','t','d','\r','\n',
+     'A','c','c','e','p','t','-','L','a','n','g','u','a','g','e',':',' ',
+     'e','n','-','U','S',',',
+     'e','n',';','q','=','0','.','9',',',
+     'p','t',';','q','=','0','.','8',',',
+     't','r',';','q','=','0','.','7',',',
+     'a','r',';','q','=','0','.','6','\r','\n',
+     '\r','\n'
+        };
+        http_request* req = new http_request{};
+        req->buffer_raw_ptr = std::move(vec);
+        HostManager* host = new HostManager();
+        std::cout << host->send(req) << std::endl;
     }
     catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
