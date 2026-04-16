@@ -2,5 +2,6 @@
 D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Networking\HttpParser.h(67,42): warning C4267: '=': conversion from 'size_t' to 'uint16_t', possible loss of data
   (compiling source file 'Engine.cpp')
   
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\Engine\Networking\HttpParser.h(105,1): warning C4715: 'HttpParser::parseFirstLine': not all control paths return a value
      Creating library D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.lib and object D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.exp
   Engine.vcxproj -> D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\x64\Debug\Engine.exe

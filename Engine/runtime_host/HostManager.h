@@ -18,7 +18,7 @@
 #define UNMANAGEDCALLERSONLY_METHOD ((const char_t*)-1)
 #endif
 
-typedef void* (*handle_request_fn)(void*);
+typedef void* (*handle_request_fn)(void* , void*);
 
 
 class HostManager {
@@ -114,10 +114,9 @@ public:
         std::cout << "--- Framework Host Manager Started ---" << std::endl;
     }
 
-    char* send(http_request* data) {
-        if (!data) return nullptr;
-        // Pass the pointer directly to C#
-        return (char*)request_handler(data);
+    char* send(http_request* req) {
+        if (!req) return nullptr;
+        return (char*)request_handler(req, req->buffer_raw_ptr.data());
     }
 
     ~HostManager() {

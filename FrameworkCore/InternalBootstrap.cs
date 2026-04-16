@@ -1,6 +1,8 @@
-﻿using System.Runtime.CompilerServices;
+﻿using FrameworkCore.Http;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using FrameworkCore.Http;
+using System.Text;
+
 
 //[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
 //public struct MyData
@@ -10,17 +12,17 @@ using FrameworkCore.Http;
 //    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
 //    public string Message;
 //}
-public static class InternalBootstrap
+public static unsafe class InternalBootstrap
 {
-    // This attribute is critical
     [UnmanagedCallersOnly(EntryPoint = "HandleRequest", CallConvs = new[] { typeof(CallConvCdecl) })]
-    public static IntPtr HandleRequest(IntPtr dataPtr)
+    public static IntPtr HandleRequest(IntPtr dataPtr , IntPtr rawDataPtr)
     {
-        Request data = new Request(dataPtr);
-        string response = $"C# Received request for URI: {data.GetUri()} with method: {data.GetMethod()}\n";
-        for (int i = 0; i < data.GetHeaderCount(); i++)
+        NativeHttpRequest reqNative = Marshal.PtrToStructure<NativeHttpRequest>(dataPtr);
+        Request data = new Request(reqNative, rawDataPtr);
+        string response = $"Received request for URI: {data.GetUri()} with method: {data.GetMethod()}";
+        for(int i = 0; i < data.GetHeaderCount(); i++)
         {
-            response += $"Header {i}: {data.GetHeaderByIndex(i)} = {(string)data.GetHeaderValueByIndex(i)}\n";
+            response += $"\n{i+1}: {data.GetHeaderByIndex(i)}: {data.GetHeaderValueByIndex(i)}";
         }
         return Marshal.StringToHGlobalAnsi(response);
     }

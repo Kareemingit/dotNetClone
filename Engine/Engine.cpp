@@ -292,8 +292,6 @@ int main() {
         //Dispatcher ReqResbuffer;
         //FrameworkEngine framework(ReqResbuffer);
         //WebServerEngine server(ReqResbuffer);
-        
-
 
         cout << "Starting ProxyServer..." << endl;
         vector<char> vec = {
@@ -339,6 +337,7 @@ int main() {
         };
         http_request* req = new http_request{};
         req->buffer_raw_ptr = std::move(vec);
+		HttpParser::parseRequest(req);
         HostManager* host = new HostManager();
         std::cout << host->send(req) << std::endl;
     }
