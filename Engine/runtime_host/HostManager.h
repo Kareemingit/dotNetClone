@@ -6,6 +6,7 @@
 #include "hostfxr.h"
 #include "coreclr_delegates.h"
 #include "..\GeneralEntities\HttpContext.h"
+#include "..\GeneralEntities\Dispatcher.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -19,16 +20,19 @@
 #endif
 
 typedef void* (*handle_request_fn)(void* , void*);
-
+typedef void (*ResponseCallbackFn)(int clientSocket, const char* responseData);
+typedef void (*register_callback_fn)(ResponseCallbackFn);
 
 class HostManager {
 private:
+	static Dispatcher* buffer;
     hostfxr_initialize_for_runtime_config_fn init_fptr;
     hostfxr_get_runtime_delegate_fn get_delegate_fptr;
     hostfxr_close_fn close_fptr;
     load_assembly_and_get_function_pointer_fn load_assembly;
     hostfxr_handle cxt = nullptr;
     handle_request_fn request_handler = nullptr;
+    register_callback_fn register_callback;
 
     std::wstring get_executable_directory() {
 #ifdef _WIN32
@@ -63,7 +67,8 @@ private:
     }
 
 public:
-    HostManager() {
+    HostManager(Dispatcher& buff) {
+		buffer = &buff;
         // 1. Dynamically build paths relative to the EXE location
         std::wstring base_path = get_executable_directory();
         std::wstring config_path = base_path + L"\\FrameworkCore.runtimeconfig.json";
@@ -105,18 +110,41 @@ public:
             nullptr,
             (void**)&request_handler);
 
+        rc = load_assembly(dll_path.c_str(), 
+            STR("InternalBootstrap, FrameworkCore"),
+            STR("RegisterResponseCallback"), 
+            ((const char_t*)-1), 
+            nullptr, 
+            (void**)&register_callback);
+
         if (rc != 0 || request_handler == nullptr) {
             std::cerr << "Error: Handshake failed. Ensure the C# DLL is in the same folder as the EXE." << std::endl;
             close_fptr(cxt);
             return;
         }
-
+        if (rc == 0 && register_callback != nullptr) {
+            register_callback(&HostManager::OnResponseFromDotNet);
+        }
         std::cout << "--- Framework Host Manager Started ---" << std::endl;
     }
 
-    char* send(http_request* req) {
-        if (!req) return nullptr;
-        return (char*)request_handler(req, req->buffer_raw_ptr.data());
+    static void OnResponseFromDotNet(int clientSocket, const char* responseData) {
+        if (buffer) {
+            http_response* resp = new http_response();
+            resp->client_socket = (uintptr_t)clientSocket;
+            std::string content(responseData);
+            resp->buffer_raw_ptr = (void*)_strdup(responseData);
+            buffer->responseQueue.enqueue(resp);
+        }
+#ifdef _WIN32
+        GlobalFree((HGLOBAL)responseData);
+#else
+        free((void*)responseData);
+#endif
+    }
+    
+    void send(http_request* req) {
+        if (req) request_handler(req, req->buffer_raw_ptr.data());
     }
 
     ~HostManager() {

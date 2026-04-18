@@ -38,5 +38,8 @@
     <ClInclude Include="Networking\Transport.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GeneralEntities\Dispatcher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

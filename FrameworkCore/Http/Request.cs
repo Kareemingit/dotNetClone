@@ -57,7 +57,6 @@ internal unsafe class Request
     public int GetHeaderCount() => _ptr.NumHeaders;
     public ReadOnlySpan<byte> GetMethodSpan() => RawBodyBuffer.Slice(_ptr.MethodOffset, _ptr.MethodLen);
     public ReadOnlySpan<byte> GetUriSpan() => RawBodyBuffer.Slice((int)_ptr.UriOffset, (int)_ptr.UriLen);
-
     public ReadOnlySpan<byte> GetBody() => RawBodyBuffer.Slice((int)_ptr.BodyStartOffset, (int)_ptr.ContentLength);
 
     public string GetMethod() => Encoding.ASCII.GetString(GetMethodSpan());
@@ -73,8 +72,8 @@ internal unsafe class Request
         var valueSpan = RawBodyBuffer.Slice((int)header.ValueOffset, (int)header.ValueLen);
         return $"{Encoding.ASCII.GetString(nameSpan)}: {Encoding.UTF8.GetString(valueSpan)}";
     }
-     public string GetHeaderByName(string name)
-     {
+    public string GetHeaderByName(string name)
+    {
         ReadOnlySpan<byte> buffer = RawBodyBuffer;
         for (int i = 0; i < _ptr.NumHeaders; i++)
         {
@@ -87,13 +86,13 @@ internal unsafe class Request
             }
         }
         return null;
-     }
+    }
 
-     public string GetHeaderValueByIndex(int index)
-     {
+    public string GetHeaderValueByIndex(int index)
+    {
         if (index < 0 || index >= _ptr.NumHeaders)
             throw new ArgumentOutOfRangeException(nameof(index));
         var header = _ptr.Headers[index];
         return Encoding.UTF8.GetString(RawBodyBuffer.Slice((int)header.ValueOffset, (int)header.ValueLen));
-     }
+    }
 }

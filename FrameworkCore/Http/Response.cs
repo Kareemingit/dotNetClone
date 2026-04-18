@@ -6,41 +6,25 @@ using System.Text;
 using System.Threading.Tasks;
 namespace FrameworkCore.Http;
 
-[StructLayout(LayoutKind.Sequential, Pack = 1)]
-internal unsafe struct NativeHttpResponse
-{
-    public byte* BufferRawPtr;
-    public UIntPtr ClientSocket;
-}
 public unsafe class Response
 {
-    private readonly NativeHttpResponse* _ptr;
     private readonly Dictionary<string, string> _headers = new();
+    private byte* BufferRawPtr;
+    private UIntPtr ClientSocket;
 
     public int StatusCode { get; set; } = 200;
     public string StatusText { get; set; } = "OK";
     public byte[] Body { get; set; } = Array.Empty<byte>();
 
-    public Response(IntPtr nativePointer)
+    public Response(UIntPtr clientSocket)
     {
-        _ptr = (NativeHttpResponse*)nativePointer;
+        ClientSocket = clientSocket;
     }
 
     public void SetHeader(string name, string value)
     {
         _headers[name] = value;
     }
-
-    public void SetClientSocket(UIntPtr socket)
-    {
-        _ptr->ClientSocket = socket;
-    }
-
-    /// <summary>
-    /// Parses all attributes into a single HTTP/1.1 wire-format string,
-    /// allocates unmanaged memory for it, and updates the C++ struct.
-    /// </summary>
-
 
     public void FinalizeResponse()
     {
@@ -81,9 +65,22 @@ public unsafe class Response
         }
 
         // 5. Update the C++ structure pointers
-        _ptr->BufferRawPtr = finalBuffer;
+        BufferRawPtr = finalBuffer;
 
         // Note: You should also pass 'totalLength' back to C++ 
         // either through the struct or a return value so it knows how many bytes to send.
+    }
+
+    public string GetRawResponseAsString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.Append($"HTTP/1.1 {StatusCode} {StatusText}\r\n");
+        foreach (var header in _headers)
+        {
+            sb.Append($"{header.Key}: {header.Value}\r\n");
+        }
+        sb.Append("\r\n");
+        sb.Append(Encoding.UTF8.GetString(Body));
+        return sb.ToString();
     }
 }

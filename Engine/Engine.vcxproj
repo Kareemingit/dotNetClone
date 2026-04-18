@@ -135,6 +135,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneralEntities\BufferQueue.h" />
+    <ClInclude Include="GeneralEntities\Dispatcher.h" />
     <ClInclude Include="GeneralEntities\HttpContext.h" />
     <ClInclude Include="Networking\HttpParser.h" />
     <ClInclude Include="Networking\SocketUtils.h" />

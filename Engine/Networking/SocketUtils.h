@@ -30,7 +30,6 @@ typedef int socket_t;
 #define CLOSE_SOCKET close
 #define GET_NET_ERROR errno
 #endif
-#include <functional>
 #define HTTP_DEFAULT_PORT 80
 #define HTTPS_DEFAULT_PORT 443
 
