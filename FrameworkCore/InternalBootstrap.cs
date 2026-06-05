@@ -1,18 +1,9 @@
 ﻿using FrameworkCore.Http;
-using System.Net.Sockets;
+using FrameworkCore.Http.Native;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
-
-//[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
-//public struct MyData
-//{
-//    public int Id;
-//    public float Value;
-//    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-//    public string Message;
-//}
 public static unsafe class InternalBootstrap
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -31,10 +22,7 @@ public static unsafe class InternalBootstrap
     public static void HandleRequest(IntPtr dataPtr , IntPtr rawDataPtr)
     {
         NativeHttpRequest reqNative = Marshal.PtrToStructure<NativeHttpRequest>(dataPtr);
-        Request request = new Request(reqNative, rawDataPtr);
-        Response response = new Response(reqNative.ClientSocket);
-        HttpContext context = new HttpContext(request, response);
-        // threw context to the Middleware pipeline
+
         string responseStr = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nOK";
         ThrewResponseToCpp((int)reqNative.ClientSocket, responseStr);
     }
