@@ -1,9 +1,16 @@
 ﻿using FrameworkCore.Http;
+using FrameworkCore.Http.Headers;
 using FrameworkCore.Http.Native;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
+class UserTest
+{
+    public int id { get; set; }
+    public string name { get; set; }
+    public string username { get; set; }
+}
 public static unsafe class InternalBootstrap
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -24,6 +31,8 @@ public static unsafe class InternalBootstrap
         NativeHttpRequest reqNative = Marshal.PtrToStructure<NativeHttpRequest>(dataPtr);        
         Request request = new Request(reqNative, rawDataPtr);
         Console.WriteLine(request.ToString());
+        UserTest? userTest = request.ReadJson<UserTest>();
+        Console.WriteLine($"Deserialized UserTest: id={userTest?.id}, name={userTest?.name}, username={userTest?.username}");
         string responseStr = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nOK";
         ThrewResponseToCpp((int)reqNative.ClientSocket, responseStr);
     }
