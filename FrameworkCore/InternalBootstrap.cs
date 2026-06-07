@@ -21,8 +21,9 @@ public static unsafe class InternalBootstrap
     [UnmanagedCallersOnly(EntryPoint = "HandleRequest", CallConvs = new[] { typeof(CallConvCdecl) })]
     public static void HandleRequest(IntPtr dataPtr , IntPtr rawDataPtr)
     {
-        NativeHttpRequest reqNative = Marshal.PtrToStructure<NativeHttpRequest>(dataPtr);
-
+        NativeHttpRequest reqNative = Marshal.PtrToStructure<NativeHttpRequest>(dataPtr);        
+        Request request = new Request(reqNative, rawDataPtr);
+        Console.WriteLine(request.ToString());
         string responseStr = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nOK";
         ThrewResponseToCpp((int)reqNative.ClientSocket, responseStr);
     }

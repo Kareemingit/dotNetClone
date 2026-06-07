@@ -28,6 +28,7 @@ public:
     }
     ~Transport() {
         // Clean up sockets
+        //SSL_CTX_free(sslCtx);
     }
 
     void setSockets(socket_t http, socket_t https) {
@@ -67,7 +68,7 @@ public:
                 ci->state = STATE_CONNECTED;
                 setNonBlocking(newSock);
 
-                cout << "[CONN] New client on port " << port << endl;
+                //cout << "[CONN] New client on port " << port << endl;
             }
             if (listenSock == httpsListenSock) {
                 SSL* ssl = SSL_new(sslCtx);

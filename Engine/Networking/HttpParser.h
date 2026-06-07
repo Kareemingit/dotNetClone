@@ -158,11 +158,13 @@ public:
             cerr << "[ERROR] Failed to parse headers." << endl;
             return;
         }
+        const vector<char>& raw = req->buffer_raw_ptr;
+        req->content_length = (int)(raw.size() - req->body_start_offset);
     }
 
     static void printRequest(http_request* req) {
         const vector<char>& raw = req->buffer_raw_ptr;
-
+		cout << "---- Content-Length: " << req->content_length << " ----\n";
         cout << "---- Parsed Request ----\n";
 
         cout << "Method: ";
@@ -198,9 +200,8 @@ public:
                 if (isprint(c) || c == '\n' || c == '\r') {
                     cout << c;
                 }
-                else {
-                    cout << "\\x" << hex << (int)(unsigned char)c << dec;
-                }
+                else
+					break;
 			}
         }
     }

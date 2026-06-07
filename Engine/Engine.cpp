@@ -46,20 +46,36 @@ public:
     }
 };
 
-class WebServerEngine {
+class ClientManager {
 private:
-    Dispatcher& buffer;
-    thread workerThread;
+    mutex mapMutex;
     atomic<bool> running{ true };
-	mutex mapMutex;
-    socket_t httpListenSock;
-    socket_t httpsListenSock;
-    unordered_map<socket_t , http_client*> clients;
+    unordered_map<socket_t, http_client*> clients;
     unordered_map<socket_t, http_request*> client_request_pointers;
-    fd_set readfds;
-	fd_set writefds;
-	Transport transport;
+    Dispatcher& buffer;
+    Transport transport;
+public:
+    ClientManager(socket_t httpSock, socket_t httpsSock, Dispatcher& buffer) : buffer(buffer) {
+        running = true;
+        transport = Transport();
+        transport.setSockets(httpSock, httpsSock);
+    }
 
+    ~ClientManager() {
+        running = false;
+        for (const auto& client : clients) {
+            CLOSE_SOCKET(client.first);
+        }
+        for (auto& pair : clients) {
+            delete pair.second;
+        }
+        clients.clear();
+        for (auto& pair : client_request_pointers) {
+            delete pair.second;
+        }
+        client_request_pointers.clear();
+    }
+    
     int handleClientRequest(http_client& client) {
         if (client_request_pointers.find(client.socket) == client_request_pointers.end()) {
             http_request* newReq = new http_request();
@@ -67,40 +83,55 @@ private:
             client_request_pointers[client.socket] = newReq;
             client.bytesRead = 0;
         }
-		auto& req = client_request_pointers[client.socket];
+        auto& req = client_request_pointers[client.socket];
         char* writePtr = &req->buffer_raw_ptr[client.bytesRead];
         size_t remainingSpace = client.bufferSize - client.bytesRead - 1;
 
-		int bytes = transport.receiveFromClient(&client, writePtr, remainingSpace);
+        int bytes = transport.receiveFromClient(&client, writePtr, remainingSpace);
 
         if (bytes <= 0) {
             if (client_request_pointers.count(client.socket)) {
                 delete client_request_pointers[client.socket];
                 client_request_pointers.erase(client.socket);
             }
-            return 0; 
+            return 0;
         }
-
         client.bytesRead += bytes;
         req->buffer_raw_ptr[client.bytesRead] = '\0';
-		
+
         const char* headerEnd = strstr(&req->buffer_raw_ptr[0], "\r\n\r\n");
 
         if (headerEnd) {
+            size_t headerLen = headerEnd - &req->buffer_raw_ptr[0] + 4;
+
+            size_t contentLength = 0;
+            const char* contentLengthPtr = strstr(&req->buffer_raw_ptr[0], "Content-Length:");
+            if (!contentLengthPtr) {
+                contentLengthPtr = strstr(&req->buffer_raw_ptr[0], "content-length:"); // case-insensitivity
+            }
+            if (contentLengthPtr) {
+                contentLength = strtol(contentLengthPtr + 15, nullptr, 10);
+            }
+            size_t totalExpectedBytes = headerLen + contentLength;
+
+            if (client.bytesRead < totalExpectedBytes) {
+                cout << "Headers finished, but waiting for body bytes: "<< client.bytesRead << "/" << totalExpectedBytes << endl;
+                return 2;
+            }
             cout << "Request complete or headers finished." << endl;
-            http_request* req = client_request_pointers[client.socket];            
+            http_request* req = client_request_pointers[client.socket];
             req->client_socket = (uintptr_t)client.socket;
-			buffer.requestQueue.enqueue(req);
-            cout << "[Framework] Request enqueued from socket " << client.socket << endl;
+            buffer.requestQueue.enqueue(req);
+            //cout << "[Framework] Request enqueued from socket " << client.socket << endl;
             return 1;
         }
         else {
             cout << "Request incomplete, waiting for more packets..." << endl;
             return 2;
         }
-		return 1;
+        return 1;
     }
-    
+	
     void handleClientResponse() {
         while (running) {
             http_response* resp = buffer.responseQueue.dequeue();
@@ -127,65 +158,8 @@ private:
             delete resp;
         }
     }
-    
-    void handleEventLoop() {
-        for (auto it = clients.begin(); it != clients.end(); ) {
-            socket_t fd = it->first;
-            http_client* ci = it->second;
-            bool disconnected = false;
-            if (FD_ISSET(fd, &readfds) || FD_ISSET(fd, &writefds)) {
-                if (ci->state == STATE_HANDSHAKING) {
-					int hsResult = transport.handshakeClient(ci);
-                    if (hsResult == 0) {
-                        cout << "[SSL] Handshake failed, closing." << endl;
-                        transport.freeClientResources(ci);
-                        it = clients.erase(it);
-					}
-                    continue;
-                }
-                else {
-                    if (handleClientRequest(*ci) <= 0) {
-                        disconnected = true;
-                    }
-                }
-            }
-            
-            if (disconnected) {
-                if (client_request_pointers.count(fd)) {
-                    delete client_request_pointers[fd];
-                    client_request_pointers.erase(fd);
-                }
-				transport.freeClientResources(ci);
-                delete ci;
-                it = clients.erase(it);
-            }
-            else {
-                ++it;
-            }
-        }
-    }
 
-    void handleNewConnection(socket_t listenSock, int port) {
-        if (FD_ISSET(listenSock, &readfds)) {
-            socket_t newSock = accept(listenSock, NULL, NULL);
-            http_client* ci = new http_client;
-            if (transport.acceptClient(ci, newSock, port, listenSock)) {
-                clients.insert({ newSock, ci });
-            }
-            else {
-				transport.freeClientResources(ci);
-                delete ci;
-            }
-        }
-    }
-
-    void initFDSet() {
-        FD_ZERO(&readfds);
-		FD_ZERO(&writefds);
-
-        FD_SET(httpListenSock, &readfds);
-        FD_SET(httpsListenSock, &readfds);
-
+    void initClientsFDSet(fd_set& readfds, fd_set& writefds) {
         for (const auto& client : clients) {
             socket_t fd = client.first;
             http_client* ci = client.second;
@@ -200,37 +174,73 @@ private:
         }
     }
 
-    void runServer() {
-        cout << "Server running..." << endl;
-        cout << "[LOG] Listening for HTTP on port: " << HTTP_DEFAULT_PORT << endl;
-        cout << "[LOG] Listening for HTTPS on port: " << HTTPS_DEFAULT_PORT << endl;
-        workerThread = std::thread(&WebServerEngine::handleClientResponse, this);
-        while (true) {
-            initFDSet();
-            int max_fd = 0;
-#ifndef _WIN32
-            max_fd = (int)httpListenSock;
-            if ((int)httpsListenSock > max_fd) max_fd = (int)httpsListenSock;
-            for (const auto& client : clients) {
-                if ((int)client.first > max_fd) max_fd = (int)client.first;
+    void handleEventLoop(fd_set& readfds, fd_set& writefds) {
+        for (auto it = clients.begin(); it != clients.end(); ) {
+            socket_t fd = it->first;
+            http_client* ci = it->second;
+            bool disconnected = false;
+            if (FD_ISSET(fd, &readfds) || FD_ISSET(fd, &writefds)) {
+                if (ci->state == STATE_HANDSHAKING) {
+                    int hsResult = transport.handshakeClient(ci);
+                    if (hsResult == 0) {
+                        //cout << "[SSL] Handshake failed, closing." << endl;
+                        transport.freeClientResources(ci);
+                        it = clients.erase(it);
+                    }
+                    continue;
+                }
+                else {
+                    if (handleClientRequest(*ci) <= 0) {
+                        disconnected = true;
+                    }
+                }
             }
-#endif
-            int activity = select(max_fd+1, &readfds, &writefds, NULL, NULL);
 
-            if (activity == SOCKET_ERROR) {
-                cerr << "[ERROR] Select error: " << WSAGetLastError() << endl;
-                break;
+            if (disconnected) {
+                transport.freeClientResources(ci);
+                delete ci;
+                it = clients.erase(it);
             }
-
-            // 1. Check for new connections and tag them with the correct port
-            handleNewConnection(httpListenSock, HTTP_DEFAULT_PORT);
-            handleNewConnection(httpsListenSock, HTTPS_DEFAULT_PORT);
-
-            // 2. Handle IO for existing clients
-            handleEventLoop();
+            else {
+                ++it;
+            }
+        }
+    }
+    
+    void addClient(socket_t newSock, int port, socket_t listenSock, http_client* ci) {
+        if (transport.acceptClient(ci, newSock, port, listenSock)) {
+            clients.insert({ newSock, ci });
+        }
+        else {
+            transport.freeClientResources(ci);
+            delete ci;
         }
     }
 
+    int getMaxFD(socket_t httpListenSock, socket_t httpsListenSock) {
+#ifndef _WIN32
+		int max_fd = max(httpListenSock, httpsListenSock);
+        for (const auto& client : clients) {
+            if ((int)client.first > max_fd) max_fd = (int)client.first;
+        }
+		return max_fd;
+#endif
+		return 0;
+    }
+
+    unordered_map<socket_t, http_client*>& getClients() {
+        return clients;
+    }
+
+    Transport& getTransport() {
+        return transport;
+	}
+};
+
+class ServerManager {
+private:
+    socket_t httpListenSock;
+    socket_t httpsListenSock;
     socket_t createListenSocket(int port) {
         socket_t sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (sock == INVALID_SOCKET) return INVALID_SOCKET;
@@ -249,40 +259,92 @@ private:
         listen(sock, SOMAXCONN);
         return sock;
     }
+
 public:
-    WebServerEngine(Dispatcher& buff) : buffer(buff){
+    ServerManager() {
         initSockets();
         httpListenSock = createListenSocket(HTTP_DEFAULT_PORT);
         httpsListenSock = createListenSocket(HTTPS_DEFAULT_PORT);
-
         if (httpListenSock == INVALID_SOCKET || httpsListenSock == INVALID_SOCKET) {
             cerr << "[FATAL] Failed to initialize listening sockets." << endl;
             return;
         }
+    }
+
+    void handleNewConnection(socket_t listenSock, int port, ClientManager* clientManager) {
+        socket_t newSock = accept(listenSock, NULL, NULL);
+        http_client* ci = new http_client;
+        clientManager->addClient(newSock, port, listenSock, ci);
+    }
+
+    ~ServerManager() {
+        CLOSE_SOCKET(httpListenSock);
+        CLOSE_SOCKET(httpsListenSock);
+    }
+
+    socket_t getHttpListenSock() const { return httpListenSock; }
+    socket_t getHttpsListenSock() const { return httpsListenSock; }
+};
+
+class WebServerEngine {
+private:
+    thread workerThread;
+	ServerManager* serverManager;
+	ClientManager* clientManager;
+    atomic<bool> running{ true };
+    fd_set readfds;
+    fd_set writefds;
+
+    void initFDSet() {
+        FD_ZERO(&readfds);
+        FD_ZERO(&writefds);
+        FD_SET(serverManager->getHttpListenSock(), &readfds);
+        FD_SET(serverManager->getHttpsListenSock(), &readfds);
+        clientManager->initClientsFDSet(readfds, writefds);
+    }
+
+    void runServer() {
+        cout << "Server running..." << endl;
+        cout << "[LOG] Listening for HTTP on port: " << HTTP_DEFAULT_PORT << endl;
+        cout << "[LOG] Listening for HTTPS on port: " << HTTPS_DEFAULT_PORT << endl;
+        workerThread = thread(&ClientManager::handleClientResponse, clientManager);
+        while (running) {
+            initFDSet();
+            int max_fd = clientManager->getMaxFD(serverManager->getHttpListenSock(), serverManager->getHttpsListenSock());
+            int activity = select(max_fd + 1, &readfds, &writefds, NULL, NULL);
+
+            if (activity == SOCKET_ERROR) {
+                cerr << "[ERROR] Select error: " << WSAGetLastError() << endl;
+                break;
+            }
+
+            // 1. Check for new connections and tag them with the correct port
+            if (FD_ISSET(serverManager->getHttpListenSock(), &readfds)) {
+                serverManager->handleNewConnection(serverManager->getHttpListenSock(), HTTP_DEFAULT_PORT, clientManager);
+            }
+            if (FD_ISSET(serverManager->getHttpsListenSock(), &readfds)) {
+                serverManager->handleNewConnection(serverManager->getHttpsListenSock(), HTTPS_DEFAULT_PORT, clientManager);
+            }
+            // 2. Handle IO for existing clients
+            clientManager->handleEventLoop(readfds, writefds);
+        }
+    }
+
+public:
+    WebServerEngine(Dispatcher& buff){
 		running = true;
-		transport = Transport();
-		transport.setSockets(httpListenSock, httpsListenSock);
+		serverManager = new ServerManager();
+        clientManager = new ClientManager(serverManager->getHttpListenSock(), serverManager->getHttpsListenSock(), buff);
         runServer();
     }
 
     ~WebServerEngine() {
-        running = false;
+		running = false;
         if (workerThread.joinable()) {
             workerThread.join();
         }
-        CLOSE_SOCKET(httpListenSock);
-        CLOSE_SOCKET(httpsListenSock);
-        for (const auto& client : clients) {
-            CLOSE_SOCKET(client.first);
-        }
-        for (auto& pair : clients) {
-            delete pair.second;
-        }
-        clients.clear();
-        for (auto& pair : client_request_pointers) {
-            delete pair.second;
-        }
-        client_request_pointers.clear();
+        delete serverManager;
+		delete clientManager;
         cleanUpSockets();
     }
 };
@@ -301,192 +363,8 @@ int main() {
     return 0;
 }
 
-
-//      cout << "Starting ProxyServer..." << endl;
-//      vector<char> vec = {
-//   'G','E','T',' ','/',' ','H','T','T','P','/','1','.','1','\r','\n',
-//   'H','o','s','t',':',' ','l','o','c','a','l','h','o','s','t','\r','\n',
-//   'C','o','n','n','e','c','t','i','o','n',':',' ','k','e','e','p','-','a','l','i','v','e','\r','\n',
-//   's','e','c','-','c','h','-','u','a',':',' ','"','N','o','t',':','A','-','B','r','a','n','d','"',';','v','=','"','9','9','"',',',' ',
-//   '"','G','o','o','g','l','e',' ','C','h','r','o','m','e','"',';','v','=','"','1','4','5','"',',',' ',
-//   '"','C','h','r','o','m','i','u','m','"',';','v','=','"','1','4','5','"','\r','\n',
-//   's','e','c','-','c','h','-','u','a','-','m','o','b','i','l','e',':',' ','?','0','\r','\n',
-//   's','e','c','-','c','h','-','u','a','-','p','l','a','t','f','o','r','m',':',' ','"','W','i','n','d','o','w','s','"','\r','\n',
-//   'U','p','g','r','a','d','e','-','I','n','s','e','c','u','r','e','-','R','e','q','u','e','s','t','s',':',' ','1','\r','\n',
-//   'U','s','e','r','-','A','g','e','n','t',':',' ',
-//   'M','o','z','i','l','l','a','/','5','.','0',' ',
-//   '(','W','i','n','d','o','w','s',' ','N','T',' ','1','0','.','0',';',' ','W','i','n','6','4',';',' ','x','6','4',')',' ',
-//   'A','p','p','l','e','W','e','b','K','i','t','/','5','3','7','.','3','6',' ',
-//   '(','K','H','T','M','L',',',' ','l','i','k','e',' ','G','e','c','k','o',')',' ',
-//   'C','h','r','o','m','e','/','1','4','5','.','0','.','0','.','0',' ',
-//   'S','a','f','a','r','i','/','5','3','7','.','3','6','\r','\n',
-//   'S','e','c','-','P','u','r','p','o','s','e',':',' ','p','r','e','f','e','t','c','h',';','p','r','e','r','e','n','d','e','r','\r','\n',
-//   'A','c','c','e','p','t',':',' ',
-//   't','e','x','t','/','h','t','m','l',',',
-//   'a','p','p','l','i','c','a','t','i','o','n','/','x','h','t','m','l','+','x','m','l',',',
-//   'a','p','p','l','i','c','a','t','i','o','n','/','x','m','l',';','q','=','0','.','9',',',
-//   'i','m','a','g','e','/','a','v','i','f',',',
-//   'i','m','a','g','e','/','w','e','b','p',',',
-//   'i','m','a','g','e','/','a','p','n','g',',',
-//   '*','/','*',';','q','=','0','.','8',',',
-//   'a','p','p','l','i','c','a','t','i','o','n','/','s','i','g','n','e','d','-','e','x','c','h','a','n','g','e',';','v','=','b','3',';','q','=','0','.','7','\r','\n',
-//   'S','e','c','-','F','e','t','c','h','-','S','i','t','e',':',' ','n','o','n','e','\r','\n',
-//   'S','e','c','-','F','e','t','c','h','-','M','o','d','e',':',' ','n','a','v','i','g','a','t','e','\r','\n',
-//   'S','e','c','-','F','e','t','c','h','-','U','s','e','r',':',' ','?','1','\r','\n',
-//   'S','e','c','-','F','e','t','c','h','-','D','e','s','t',':',' ','d','o','c','u','m','e','n','t','\r','\n',
-//   'A','c','c','e','p','t','-','E','n','c','o','d','i','n','g',':',' ',
-//   'g','z','i','p',',',' ','d','e','f','l','a','t','e',',',' ','b','r',',',' ','z','s','t','d','\r','\n',
-//   'A','c','c','e','p','t','-','L','a','n','g','u','a','g','e',':',' ',
-//   'e','n','-','U','S',',',
-//   'e','n',';','q','=','0','.','9',',',
-//   'p','t',';','q','=','0','.','8',',',
-//   't','r',';','q','=','0','.','7',',',
-//   'a','r',';','q','=','0','.','6','\r','\n',
-//   '\r','\n'
-//      };
-//      http_request* req = new http_request{};
-//      req->buffer_raw_ptr = std::move(vec);
-      //HttpParser::parseRequest(req);
-//      HostManager* host = new HostManager();
-//      host->send(req);
-
-//cout << "Starting ProxyServer..." << endl;
-//WebServerEngine server;
-//cout << "Server shutting down." << endl;
-//MyData d1 = { 14 , 0.25f , "POST HTTPS1/1"};
-//MyData d2 = { 99 , 0.19f , "GET HTTPS1/1" };
-//MyData d3 = { 528 , 0.37f , "PUT HTTPS1/1" };
-//HostManager* host = new HostManager();
-//std::cout << host->send(d1) << std::endl;
-//std::cout << host->send(d2) << std::endl;
-//std::cout << host->send(d3) << std::endl;
-
-/*
-        const char* response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Length: 2\r\n"
-            "Content-Type: text/plain\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "OK";
-
-
-
-        cout << "Test 1: Full Browser Request\n";
-
-        vector<char> vec = {
-    'G','E','T',' ','/',' ','H','T','T','P','/','1','.','1','\r','\n',
-
-    'H','o','s','t',':',' ','l','o','c','a','l','h','o','s','t','\r','\n',
-    'C','o','n','n','e','c','t','i','o','n',':',' ','k','e','e','p','-','a','l','i','v','e','\r','\n',
-
-    's','e','c','-','c','h','-','u','a',':',' ','"','N','o','t',':','A','-','B','r','a','n','d','"',';','v','=','"','9','9','"',',',' ',
-    '"','G','o','o','g','l','e',' ','C','h','r','o','m','e','"',';','v','=','"','1','4','5','"',',',' ',
-    '"','C','h','r','o','m','i','u','m','"',';','v','=','"','1','4','5','"','\r','\n',
-
-    's','e','c','-','c','h','-','u','a','-','m','o','b','i','l','e',':',' ','?','0','\r','\n',
-    's','e','c','-','c','h','-','u','a','-','p','l','a','t','f','o','r','m',':',' ','"','W','i','n','d','o','w','s','"','\r','\n',
-
-    'U','p','g','r','a','d','e','-','I','n','s','e','c','u','r','e','-','R','e','q','u','e','s','t','s',':',' ','1','\r','\n',
-
-    'U','s','e','r','-','A','g','e','n','t',':',' ',
-    'M','o','z','i','l','l','a','/','5','.','0',' ',
-    '(','W','i','n','d','o','w','s',' ','N','T',' ','1','0','.','0',';',' ','W','i','n','6','4',';',' ','x','6','4',')',' ',
-    'A','p','p','l','e','W','e','b','K','i','t','/','5','3','7','.','3','6',' ',
-    '(','K','H','T','M','L',',',' ','l','i','k','e',' ','G','e','c','k','o',')',' ',
-    'C','h','r','o','m','e','/','1','4','5','.','0','.','0','.','0',' ',
-    'S','a','f','a','r','i','/','5','3','7','.','3','6','\r','\n',
-
-    'S','e','c','-','P','u','r','p','o','s','e',':',' ','p','r','e','f','e','t','c','h',';','p','r','e','r','e','n','d','e','r','\r','\n',
-
-    'A','c','c','e','p','t',':',' ',
-    't','e','x','t','/','h','t','m','l',',',
-    'a','p','p','l','i','c','a','t','i','o','n','/','x','h','t','m','l','+','x','m','l',',',
-    'a','p','p','l','i','c','a','t','i','o','n','/','x','m','l',';','q','=','0','.','9',',',
-    'i','m','a','g','e','/','a','v','i','f',',',
-    'i','m','a','g','e','/','w','e','b','p',',',
-    'i','m','a','g','e','/','a','p','n','g',',',
-    '*','/','*',';','q','=','0','.','8',',',
-    'a','p','p','l','i','c','a','t','i','o','n','/','s','i','g','n','e','d','-','e','x','c','h','a','n','g','e',';','v','=','b','3',';','q','=','0','.','7','\r','\n',
-
-    'S','e','c','-','F','e','t','c','h','-','S','i','t','e',':',' ','n','o','n','e','\r','\n',
-    'S','e','c','-','F','e','t','c','h','-','M','o','d','e',':',' ','n','a','v','i','g','a','t','e','\r','\n',
-    'S','e','c','-','F','e','t','c','h','-','U','s','e','r',':',' ','?','1','\r','\n',
-    'S','e','c','-','F','e','t','c','h','-','D','e','s','t',':',' ','d','o','c','u','m','e','n','t','\r','\n',
-
-    'A','c','c','e','p','t','-','E','n','c','o','d','i','n','g',':',' ',
-    'g','z','i','p',',',' ','d','e','f','l','a','t','e',',',' ','b','r',',',' ','z','s','t','d','\r','\n',
-
-    'A','c','c','e','p','t','-','L','a','n','g','u','a','g','e',':',' ',
-    'e','n','-','U','S',',',
-    'e','n',';','q','=','0','.','9',',',
-    'p','t',';','q','=','0','.','8',',',
-    't','r',';','q','=','0','.','7',',',
-    'a','r',';','q','=','0','.','6','\r','\n',
-
-    '\r','\n'
-        };
-
-        http_request* req = new http_request{};
-        req->buffer_raw_ptr = std::move(vec);
-        cout << "parser 1" << endl;
-        HttpParser::parseRequest(req);
-        printRequest(req);
-*/
-
 /*
 
-        vector<char> vec = {
-    'G','E','T',' ','/',' ','H','T','T','P','/','1','.','1','\r','\n',
-
-    'H','o','s','t',':',' ','l','o','c','a','l','h','o','s','t','\r','\n',
-    'C','o','n','n','e','c','t','i','o','n',':',' ','k','e','e','p','-','a','l','i','v','e','\r','\n',
-
-    's','e','c','-','c','h','-','u','a',':',' ','"','N','o','t',':','A','-','B','r','a','n','d','"',';','v','=','"','9','9','"',',',' ',
-    '"','G','o','o','g','l','e',' ','C','h','r','o','m','e','"',';','v','=','"','1','4','5','"',',',' ',
-    '"','C','h','r','o','m','i','u','m','"',';','v','=','"','1','4','5','"','\r','\n',
-
-    's','e','c','-','c','h','-','u','a','-','m','o','b','i','l','e',':',' ','?','0','\r','\n',
-    's','e','c','-','c','h','-','u','a','-','p','l','a','t','f','o','r','m',':',' ','"','W','i','n','d','o','w','s','"','\r','\n',
-
-    'U','p','g','r','a','d','e','-','I','n','s','e','c','u','r','e','-','R','e','q','u','e','s','t','s',':',' ','1','\r','\n',
-
-    'U','s','e','r','-','A','g','e','n','t',':',' ',
-    'M','o','z','i','l','l','a','/','5','.','0',' ',
-    '(','W','i','n','d','o','w','s',' ','N','T',' ','1','0','.','0',';',' ','W','i','n','6','4',';',' ','x','6','4',')',' ',
-    'A','p','p','l','e','W','e','b','K','i','t','/','5','3','7','.','3','6',' ',
-    '(','K','H','T','M','L',',',' ','l','i','k','e',' ','G','e','c','k','o',')',' ',
-    'C','h','r','o','m','e','/','1','4','5','.','0','.','0','.','0',' ',
-    'S','a','f','a','r','i','/','5','3','7','.','3','6','\r','\n',
-
-    'S','e','c','-','P','u','r','p','o','s','e',':',' ','p','r','e','f','e','t','c','h',';','p','r','e','r','e','n','d','e','r','\r','\n',
-
-    'A','c','c','e','p','t',':',' ',
-    't','e','x','t','/','h','t','m','l',',',
-    'a','p','p','l','i','c','a','t','i','o','n','/','x','h','t','m','l','+','x','m','l',',',
-    'a','p','p','l','i','c','a','t','i','o','n','/','x','m','l',';','q','=','0','.','9',',',
-    'i','m','a','g','e','/','a','v','i','f',',',
-    'i','m','a','g','e','/','w','e','b','p',',',
-    'i','m','a','g','e','/','a','p','n','g',',',
-    '*','/','*',';','q','=','0','.','8',',',
-    'a','p','p','l','i','c','a','t','i','o','n','/','s','i','g','n','e','d','-','e','x','c','h','a','n','g','e',';','v','=','b','3',';','q','=','0','.','7','\r','\n',
-
-    'S','e','c','-','F','e','t','c','h','-','S','i','t','e',':',' ','n','o','n','e','\r','\n',
-    'S','e','c','-','F','e','t','c','h','-','M','o','d','e',':',' ','n','a','v','i','g','a','t','e','\r','\n',
-    'S','e','c','-','F','e','t','c','h','-','U','s','e','r',':',' ','?','1','\r','\n',
-    'S','e','c','-','F','e','t','c','h','-','D','e','s','t',':',' ','d','o','c','u','m','e','n','t','\r','\n',
-
-    'A','c','c','e','p','t','-','E','n','c','o','d','i','n','g',':',' ',
-    'g','z','i','p',',',' ','d','e','f','l','a','t','e',',',' ','b','r',',',' ','z','s','t','d','\r','\n',
-
-    'A','c','c','e','p','t','-','L','a','n','g','u','a','g','e',':',' ',
-    'e','n','-','U','S',',',
-    'e','n',';','q','=','0','.','9',',',
-    'p','t',';','q','=','0','.','8',',',
-    't','r',';','q','=','0','.','7',',',
-    'a','r',';','q','=','0','.','6','\r','\n',
-
-    '\r','\n'
         };
 
                     const char* response =
