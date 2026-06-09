@@ -20,7 +20,7 @@
 #endif
 
 typedef void* (*handle_request_fn)(void* , void*);
-typedef void (*ResponseCallbackFn)(int clientSocket, const char* responseData);
+typedef void (*ResponseCallbackFn)(int clientSocket, const void* data,int length);
 typedef void (*register_callback_fn)(ResponseCallbackFn);
 
 class HostManager {
@@ -128,19 +128,15 @@ public:
         std::cout << "--- Framework Host Manager Started ---" << std::endl;
     }
 
-    static void OnResponseFromDotNet(int clientSocket, const char* responseData) {
+    static void OnResponseFromDotNet(int clientSocket,const void* responseData,int responseLength) {
         if (buffer) {
             http_response* resp = new http_response();
             resp->client_socket = (uintptr_t)clientSocket;
-            std::string content(responseData);
-            resp->buffer_raw_ptr = (void*)_strdup(responseData);
+            resp->buffer_size = responseLength;
+            resp->buffer_raw_ptr = malloc(responseLength);
+            memcpy(resp->buffer_raw_ptr,responseData,responseLength);
             buffer->responseQueue.enqueue(resp);
         }
-#ifdef _WIN32
-        GlobalFree((HGLOBAL)responseData);
-#else
-        free((void*)responseData);
-#endif
     }
     
     void send(http_request* req) {

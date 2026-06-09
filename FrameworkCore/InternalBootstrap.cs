@@ -1,10 +1,7 @@
 ﻿using FrameworkCore.Http;
-using FrameworkCore.Http.Headers;
 using FrameworkCore.Http.Native;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-
 class UserTest
 {
     public int id { get; set; }
@@ -14,7 +11,7 @@ class UserTest
 public static unsafe class InternalBootstrap
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public delegate void ResponseCallbackDelegate(int clientSocket, IntPtr responseData);
+    public delegate void ResponseCallbackDelegate(nuint clientSocket, IntPtr responseData , int responseSize);
 
     private static ResponseCallbackDelegate _cppResponseCallback;
 
@@ -31,18 +28,27 @@ public static unsafe class InternalBootstrap
         NativeHttpRequest reqNative = Marshal.PtrToStructure<NativeHttpRequest>(dataPtr);        
         Request request = new Request(reqNative, rawDataPtr);
         Console.WriteLine(request.ToString());
-        UserTest? userTest = request.ReadJson<UserTest>();
-        Console.WriteLine($"Deserialized UserTest: id={userTest?.id}, name={userTest?.name}, username={userTest?.username}");
-        string responseStr = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nOK";
-        ThrewResponseToCpp((int)reqNative.ClientSocket, responseStr);
+        if (request.TryReadJson<UserTest>(out UserTest? userTest))
+        {
+            Console.WriteLine($"Deserialized UserTest: id={userTest?.id}, name={userTest?.name}, username={userTest?.username}");
+        }
+        Response response = new Response(reqNative.ClientSocket);
+        response.Ok();
+        response.SetHeader("Connection", "close");
+        response.Write("OK");
+        //string responseStr = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\nOK";
+        byte[] responseBuffer = ResponseSerializer.SerializeResponse(response);
+        fixed (byte* responsePtr = responseBuffer)
+        {
+            ThrewResponseToCpp(reqNative.ClientSocket, responsePtr, responseBuffer.Length);
+        }
     }
 
-    public static void ThrewResponseToCpp(int clientSocket, string responseStr)
+    public static void ThrewResponseToCpp(nuint clientSocket, byte* buffer, int bufferSize)
     {
         if (_cppResponseCallback != null)
         {
-            IntPtr nativeString = Marshal.StringToHGlobalAnsi(responseStr);
-            _cppResponseCallback(clientSocket, nativeString);
+            _cppResponseCallback(clientSocket, (IntPtr)buffer, bufferSize);
         }
     }
 }

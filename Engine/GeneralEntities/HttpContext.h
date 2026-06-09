@@ -68,5 +68,6 @@ struct http_request {
 
 struct http_response {
     void* buffer_raw_ptr;
+	size_t buffer_size;
     uintptr_t client_socket;
 };

@@ -1,21 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Text;
+using System.Text.Json;
 namespace FrameworkCore.Http;
 
 public unsafe class Response
 {
-    private readonly Dictionary<string, string> _headers = new();
-    private byte* BufferRawPtr;
-    private UIntPtr ClientSocket;
-
+    private nuint ClientSocket;
+    private string GetContentType(string filePath)
+    {
+        string extension = Path.GetExtension(filePath).ToLower();
+        return extension switch
+        {
+            ".html" => "text/html",
+            ".css" => "text/css",
+            ".js" => "application/javascript",
+            ".json" => "application/json",
+            ".png" => "image/png",
+            ".jpg" => "image/jpeg",
+            ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            _ => "application/octet-stream",
+        };
+    }
+    public readonly List<string> Cookies = new();
     public int StatusCode { get; set; } = 200;
     public string StatusText { get; set; } = "OK";
-    public byte[] Body { get; set; } = Array.Empty<byte>();
-
+    public string ContentType { get; set; } = "text/plain";
+    public Dictionary<string, string> Headers { get; } = new (StringComparer.OrdinalIgnoreCase);
+    public ReadOnlyMemory<byte> Body { get; set; }
     public Response(UIntPtr clientSocket)
     {
         ClientSocket = clientSocket;
@@ -23,64 +34,107 @@ public unsafe class Response
 
     public void SetHeader(string name, string value)
     {
-        _headers[name] = value;
+        Headers[name] = value;
+    }
+    public string? GetHeader(string key)
+    {
+        if (Headers.TryGetValue(key, out var value))
+            return value;
+        return null;
     }
 
-    public void FinalizeResponse()
+    public void Write(string text)
     {
-        // 1. Build the Header section
-        StringBuilder sb = new StringBuilder();
-        sb.Append($"HTTP/1.1 {StatusCode} {StatusText}\r\n");
-
-        // Ensure Content-Length is set correctly
-        _headers["Content-Length"] = Body.Length.ToString();
-        _headers["Server"] = "WinShield-Net-Core";
-
-        foreach (var header in _headers)
-        {
-            sb.Append($"{header.Key}: {header.Value}\r\n");
-        }
-        sb.Append("\r\n"); // End of headers
-
-        // 2. Convert headers to bytes
-        byte[] headerBytes = Encoding.ASCII.GetBytes(sb.ToString());
-        int totalLength = headerBytes.Length + Body.Length;
-
-        // 3. Allocate unmanaged memory that C++ will eventually free
-        // Use NativeMemory.Alloc (available in .NET 6+) for high performance
-        byte* finalBuffer = (byte*)NativeMemory.Alloc((nuint)totalLength);
-
-        // 4. Copy headers and body into the unmanaged buffer
-        fixed (byte* hPtr = headerBytes)
-        {
-            Buffer.MemoryCopy(hPtr, finalBuffer, headerBytes.Length, headerBytes.Length);
-        }
-
-        if (Body.Length > 0)
-        {
-            fixed (byte* bPtr = Body)
-            {
-                Buffer.MemoryCopy(bPtr, finalBuffer + headerBytes.Length, Body.Length, Body.Length);
-            }
-        }
-
-        // 5. Update the C++ structure pointers
-        BufferRawPtr = finalBuffer;
-
-        // Note: You should also pass 'totalLength' back to C++ 
-        // either through the struct or a return value so it knows how many bytes to send.
+        Body = Encoding.UTF8.GetBytes(text);
+        SetHeader("Content-Type", "text/plain");
+        SetHeader("Content-Length", Body.Length.ToString());
     }
 
-    public string GetRawResponseAsString()
+    public void Json<T>(T obj)
     {
-        StringBuilder sb = new StringBuilder();
-        sb.Append($"HTTP/1.1 {StatusCode} {StatusText}\r\n");
-        foreach (var header in _headers)
+        string json = JsonSerializer.Serialize(obj);
+        ContentType = "application/json";
+        Body = Encoding.UTF8.GetBytes(json);
+        SetHeader("Content-Type", "application/json");
+        SetHeader("Content-Length", Body.Length.ToString());
+    }
+
+    public void Html(string html)
+    {
+        ContentType = "text/html";
+        Body = Encoding.UTF8.GetBytes(html);
+        SetHeader("Content-Type", "text/html");
+        SetHeader("Content-Length", Body.Length.ToString());
+    }
+
+    public void File(string filePath)
+    {
+        if (!System.IO.File.Exists(filePath))
         {
-            sb.Append($"{header.Key}: {header.Value}\r\n");
+            StatusCode = 404;
+            StatusText = "Not Found";
+            Body = Encoding.UTF8.GetBytes("File not found.");
+            return;
         }
-        sb.Append("\r\n");
-        sb.Append(Encoding.UTF8.GetString(Body));
-        return sb.ToString();
+        byte[] fileBytes = System.IO.File.ReadAllBytes(filePath);
+        string contentType = GetContentType(filePath);
+        ContentType = contentType;
+        Body = fileBytes;
+    }
+
+    public void Redirect(string url, int statusCode = 302)
+    {
+        StatusCode = statusCode;
+        StatusText = StatusCode switch
+        {
+            301 => "Moved Permanently",
+            302 => "Found",
+            303 => "See Other",
+            307 => "Temporary Redirect",
+            308 => "Permanent Redirect",
+            _ => "Found"
+        };
+        SetHeader("Location", url);
+        Body = Encoding.UTF8.GetBytes($"<html><body>Redirecting to <a href=\"{url}\">{url}</a></body></html>");
+        SetHeader("Content-Type", "text/html");
+        SetHeader("Content-Length", Body.Length.ToString());
+    }
+
+    public void Ok()
+    {
+        StatusCode = 200;
+        StatusText = "OK";
+    }
+
+    public void NotFound()
+    {
+        StatusCode = 404;
+        StatusText = "Not Found";
+        Body = Encoding.UTF8.GetBytes("Resource not found.");
+    }
+
+    public void BadRequest()
+    {
+        StatusCode = 400;
+        StatusText = "Bad Request";
+        Body = Encoding.UTF8.GetBytes("Bad Request");
+    }
+
+    public void Unauthorized()
+    {
+        StatusCode = 401;
+        StatusText = "Unauthorized";
+        Body = Encoding.UTF8.GetBytes("Unauthorized Access");
+    }
+    public void NoContent()
+    {
+        StatusCode = 204;
+        StatusText = "No Content";
+        Body = ReadOnlyMemory<byte>.Empty;
+    }
+    public void Forbidden()
+    {
+        StatusCode = 403;
+        StatusText = "Forbidden";
     }
 }

@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text;
 using FrameworkCore.Http.Native;
 using FrameworkCore.Http.Headers;
@@ -12,7 +10,7 @@ public unsafe sealed class Request
     private readonly byte* _buffer;
     private string? _cachedPath;
     private string? _cachedBody;
-    private Dictionary<string, string> _cachedHeaders = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string> _cachedHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<Type, object> _jsonCache = new();
     private ReadOnlySpan<byte> PathSpan=> new(_buffer + _native.UriOffset,(int)_native.UriLen);
     private ReadOnlySpan<byte> BodySpan=> new(_buffer + _native.BodyStartOffset,(int)ContentLength);
@@ -70,7 +68,7 @@ public unsafe sealed class Request
     }
     public string QueryString { get; set; }
     public string Body => GetBody();
-    public Dictionary<string, string> RouteValues { get; }
+    public Dictionary<string, string> RouteValues { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     public long ContentLength { get; set; }
     public string ContentType { get; set; }
 

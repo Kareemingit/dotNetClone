@@ -135,7 +135,7 @@ public:
     void handleClientResponse() {
         while (running) {
             http_response* resp = buffer.responseQueue.dequeue();
-            lock_guard<mutex> lock(mapMutex);
+            //lock_guard<mutex> lock(mapMutex);
 
             auto it = clients.find(resp->client_socket);
             if (it == clients.end()) {
@@ -143,6 +143,7 @@ public:
                     delete client_request_pointers[resp->client_socket];
                     client_request_pointers.erase(resp->client_socket);
                 }
+				free(resp->buffer_raw_ptr);
                 delete resp;
                 continue;
             }
