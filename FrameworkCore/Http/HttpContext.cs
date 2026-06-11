@@ -8,6 +8,7 @@ public class HttpContext
 {
     public Request Request;
     public Response Response;
+    public RequestDelegate? Endpoint;
     public Dictionary<string, object> Items { get; }
     public HttpContext(NativeHttpRequest nativeRequest, IntPtr rawDataPtr)
     {
