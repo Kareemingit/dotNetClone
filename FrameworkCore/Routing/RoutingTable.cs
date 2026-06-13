@@ -8,14 +8,14 @@ namespace FrameworkCore.Routing;
 
 public class RoutingTable
 {
-    private Dictionary<string, RequestDelegate> _staticRouts = new();
-    private List<KeyValuePair<string[] , RequestDelegate>> _dynamicRouts = new();
+    private Dictionary<string, RequestDelegate> _staticRoutes = new();
+    private List<KeyValuePair<string[] , RequestDelegate>> _dynamicRoutes = new();
     private void AddDynamicRoute(string pattern , RequestDelegate endpoint)
     {
         string[] template = pattern.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         //validate { }
         var pair = KeyValuePair.Create(template , endpoint);
-        _dynamicRouts.Add(pair);
+        _dynamicRoutes.Add(pair);
     }
 
     public void RegisterNewRoute(string pattern , RequestDelegate endpoint){
@@ -26,19 +26,19 @@ public class RoutingTable
                 AddDynamicRoute(pattern, endpoint);
             }
             else {
-                _staticRouts[pattern] = endpoint;
+                _staticRoutes[pattern] = endpoint;
             }
         }
     }
     public bool TryMatch(string path,out RequestDelegate endpoint,out Dictionary<string, string> routeValues)
     {
         routeValues = new Dictionary<string, string>();
-        if (_staticRouts.TryGetValue(path, out endpoint)){
+        if (_staticRoutes.TryGetValue(path, out endpoint)){
             return true;
         }
         string[] requestSegments = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
 
-        foreach (var route in _dynamicRouts)
+        foreach (var route in _dynamicRoutes)
         {
             string[] templateSegments = route.Key;
 
