@@ -21,14 +21,7 @@ public static unsafe class InternalBootstrap
     public static void RegisterResponseCallback(IntPtr callbackPtr)
     {
         _cppResponseCallback = Marshal.GetDelegateForFunctionPointer<ResponseCallbackDelegate>(callbackPtr);
-        _app = new WebApplication();
-        _app.MapGet("/" , async ctx => {
-            ctx.Response.Write("Hello From Web Application");
-        });
-        _app.MapGet("/user/{id}", async ctx =>
-        {
-            ctx.Response.Write("User id = " + ctx.Request.RouteValues["id"]);
-        });
+        _app = UserApplication.Program.Build();
         Console.WriteLine("[Framework] Callback registered successfully.");
     }
 
@@ -53,12 +46,3 @@ public static unsafe class InternalBootstrap
         }
     }
 }
-
-//Console.WriteLine(context.Request.ToString());
-//if (context.Request.TryReadJson<UserTest>(out UserTest? userTest))
-//{
-//    Console.WriteLine($"Deserialized UserTest: id={userTest?.id}, name={userTest?.name}, username={userTest?.username}");
-//}
-//context.Response.Ok();
-//context.Response.SetHeader("Connection", "close");
-//context.Response.Write("OK");

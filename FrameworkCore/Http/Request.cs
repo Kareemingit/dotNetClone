@@ -132,7 +132,6 @@ public unsafe sealed class Request
     {
         if (_jsonCache.TryGetValue(typeof(T), out var value))
             return (T)value;
-
         var obj = JsonSerializer.Deserialize<T>(BodySpan);
 
         if (obj != null)

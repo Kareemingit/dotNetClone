@@ -69,15 +69,19 @@ public unsafe class Response
 
     public void File(string filePath)
     {
-        if (!System.IO.File.Exists(filePath))
+        string baseDir = Directory.GetCurrentDirectory().Replace("Engine" , "FrameworkCore\\UserApplication");
+        
+        string fullPath = Path.Combine(baseDir, filePath);
+        
+        if (!System.IO.File.Exists(fullPath))
         {
             StatusCode = 404;
             StatusText = "Not Found";
             Body = Encoding.UTF8.GetBytes("File not found.");
             return;
         }
-        byte[] fileBytes = System.IO.File.ReadAllBytes(filePath);
-        string contentType = GetContentType(filePath);
+        byte[] fileBytes = System.IO.File.ReadAllBytes(fullPath);
+        string contentType = GetContentType(fullPath);
         ContentType = contentType;
         Body = fileBytes;
     }

@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LabUs — Research Equipment Management</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --border: #e2e5eb;
+  --border2: #c8cdd8;
+  --accent: #1a56db;
+  --accent-soft: #eef2fd;
+  --accent-dim: #3b6fe0;
+  --green: #0e9f6e;
+  --green-soft: #ecfdf5;
+  --red: #c81e1e;
+  --red-soft: #fef2f2;
+  --amber: #b45309;
+  --amber-soft: #fffbeb;
+  --purple: #6c2bd9;
+  --purple-soft: #f5f3ff;
+  --teal: #0694a2;
+  --teal-soft: #ecfeff;
+  --text: #111928;
+  --text2: #374151;
+  --text3: #6b7280;
+  --text4: #9ca3af;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.1);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'IBM Plex Sans',sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.55; min-height:100vh; }
+code, .mono { font-family:'IBM Plex Mono',monospace; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  height:54px; background:var(--surface); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 28px; position:sticky; top:0; z-index:100; box-shadow:var(--shadow);
+}
+.logo { font-weight:600; font-size:18px; color:var(--accent); letter-spacing:-.4px; display:flex; align-items:center; gap:8px; }
+.logo-mark { width:26px; height:26px; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center; }
+.logo-mark svg { width:14px; height:14px; }
+.topbar-nav { display:flex; gap:2px; }
+.nav-btn { background:none; border:none; padding:7px 14px; border-radius:6px; font-family:'IBM Plex Sans',sans-serif; font-size:13px; font-weight:500; color:var(--text3); cursor:pointer; transition:all .15s; }
+.nav-btn:hover { background:var(--bg); color:var(--text); }
+.nav-btn.active { background:var(--accent-soft); color:var(--accent); }
+.topbar-right { display:flex; align-items:center; gap:10px; }
+.role-pill { font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; }
+.r-researcher { background:var(--accent-soft); color:var(--accent); }
+.r-pi { background:var(--purple-soft); color:var(--purple); }
+.r-admin { background:var(--amber-soft); color:var(--amber); }
+.r-lab { background:var(--red-soft); color:var(--red); }
+.r-supervisor { background:var(--green-soft); color:var(--green); }
+.r-financial { background:var(--teal-soft); color:var(--teal); }
+.avatar { width:32px; height:32px; border-radius:50%; background:var(--accent); color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; cursor:pointer; letter-spacing:-.5px; }
+
+/* ─── LAYOUT ─── */
+.page { display:none; }
+.page.active { display:flex; flex-direction:column; min-height:calc(100vh - 54px); }
+.main { flex:1; padding:28px 32px; max-width:1120px; width:100%; }
+
+/* ─── AUTH ─── */
+.auth-wrap { flex:1; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#eef2fd 0%,#f4f5f7 60%,#f5f3ff 100%); min-height:100vh; }
+.auth-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:36px; width:420px; box-shadow:var(--shadow-md); }
+.auth-logo { font-weight:600; font-size:20px; color:var(--accent); margin-bottom:4px; display:flex; align-items:center; gap:9px; }
+.auth-logo-mark { width:28px; height:28px; background:var(--accent); border-radius:7px; display:flex; align-items:center; justify-content:center; }
+.auth-sub { color:var(--text3); font-size:13px; margin-bottom:26px; }
+.field { margin-bottom:13px; }
+.field label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:5px; }
+.field input, .field select { width:100%; background:var(--bg); border:1.5px solid var(--border); color:var(--text); padding:9px 12px; border-radius:var(--radius); font-family:'IBM Plex Sans',sans-serif; font-size:13px; outline:none; transition:border-color .15s; }
+.field input:focus, .field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(26,86,219,.08); }
+.btn-primary { width:100%; padding:11px; border-radius:var(--radius); background:var(--accent); border:none; color:#fff; font-family:'IBM Plex Sans',sans-serif; font-weight:600; font-size:14px; cursor:pointer; transition:background .15s; }
+.btn-primary:hover { background:#1447b2; }
+.auth-switch { text-align:center; margin-top:16px; font-size:13px; color:var(--text3); }
+.auth-switch a { color:var(--accent); cursor:pointer; font-weight:600; }
+
+/* ─── PAGE HEADER ─── */
+.page-header { margin-bottom:22px; }
+.page-header h1 { font-size:22px; font-weight:600; color:var(--text); letter-spacing:-.3px; }
+.page-header p { color:var(--text3); font-size:13px; margin-top:3px; }
+
+/* ─── CARDS ─── */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px; box-shadow:var(--shadow); }
+.card-title { font-size:15px; font-weight:600; color:var(--text); margin-bottom:2px; }
+.card-sub { font-size:12px; color:var(--text3); margin-bottom:14px; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+
+/* ─── STAT CARDS ─── */
+.stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:16px 20px; box-shadow:var(--shadow); }
+.stat-label { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+.stat-value { font-size:26px; font-weight:600; color:var(--text); letter-spacing:-.5px; }
+.stat-note { font-size:12px; color:var(--text3); margin-top:4px; }
+.stat-up { color:var(--green); }
+.stat-down { color:var(--red); }
+
+/* ─── TABLE ─── */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { text-align:left; padding:9px 12px; border-bottom:1px solid var(--border); font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.5px; font-weight:600; background:var(--bg); }
+tbody tr { border-bottom:1px solid var(--border); transition:background .1s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:var(--bg); }
+tbody td { padding:11px 12px; color:var(--text2); vertical-align:middle; }
+td.bold { color:var(--text); font-weight:500; }
+
+/* ─── BADGES ─── */
+.badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-dot { width:5px; height:5px; border-radius:50%; background:currentColor; flex-shrink:0; }
+.bg { background:var(--green-soft); color:var(--green); }
+.bb { background:var(--accent-soft); color:var(--accent); }
+.bp { background:var(--purple-soft); color:var(--purple); }
+.by { background:var(--amber-soft); color:var(--amber); }
+.br { background:var(--red-soft); color:var(--red); }
+.bgr { background:var(--bg); color:var(--text3); }
+.bt { background:var(--teal-soft); color:var(--teal); }
+
+/* ─── BUTTONS ─── */
+.btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border-radius:var(--radius); font-family:'IBM Plex Sans',sans-serif; font-size:13px; font-weight:500; cursor:pointer; border:none; transition:all .14s; }
+.btn-sm { padding:5px 10px; font-size:12px; }
+.btn-xs { padding:3px 8px; font-size:11px; }
+.btn-accent { background:var(--accent); color:#fff; }
+.btn-accent:hover { background:#1447b2; }
+.btn-green { background:var(--green); color:#fff; }
+.btn-green:hover { background:#057a55; }
+.btn-red { background:var(--red); color:#fff; }
+.btn-red:hover { background:#9b1c1c; }
+.btn-amber { background:var(--amber); color:#fff; }
+.btn-amber:hover { background:#92400e; }
+.btn-ghost { background:transparent; color:var(--text2); border:1px solid var(--border); }
+.btn-ghost:hover { background:var(--bg); border-color:var(--border2); }
+.btn-group { display:flex; gap:6px; flex-wrap:wrap; }
+
+/* ─── SEARCH ─── */
+.search-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.search-input-wrap { display:flex; align-items:center; gap:7px; background:var(--surface); border:1.5px solid var(--border); border-radius:var(--radius); padding:0 11px; flex:1; max-width:300px; transition:border-color .15s; }
+.search-input-wrap:focus-within { border-color:var(--accent); }
+.search-input-wrap svg { color:var(--text4); flex-shrink:0; }
+.search-input-wrap input { background:none; border:none; outline:none; font-family:'IBM Plex Sans',sans-serif; font-size:13px; color:var(--text); padding:8px 0; width:100%; }
+.filter-btn { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:7px 12px; font-size:12px; font-weight:500; color:var(--text3); cursor:pointer; transition:all .12s; font-family:'IBM Plex Sans',sans-serif; }
+.filter-btn:hover,.filter-btn.active { background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
+
+/* ─── ALERT ─── */
+.alert { display:flex; gap:10px; padding:12px 14px; border-radius:var(--radius); margin-bottom:14px; font-size:13px; align-items:flex-start; }
+.alert-info { background:var(--accent-soft); border:1px solid #bfdbfe; color:#1e3a8a; }
+.alert-warn { background:var(--amber-soft); border:1px solid #fde68a; color:#78350f; }
+.alert-danger { background:var(--red-soft); border:1px solid #fecaca; color:#7f1d1d; }
+.alert-success { background:var(--green-soft); border:1px solid #a7f3d0; color:#064e3b; }
+
+/* ─── TIMELINE ─── */
+.timeline { display:flex; flex-direction:column; }
+.tl-item { display:flex; gap:12px; padding-bottom:14px; }
+.tl-left { display:flex; flex-direction:column; align-items:center; flex-shrink:0; }
+.tl-dot { width:9px; height:9px; border-radius:50%; border:2px solid var(--accent); background:var(--surface); margin-top:3px; }
+.tl-dot.filled { background:var(--accent); }
+.tl-line { width:1px; background:var(--border); flex:1; margin-top:4px; }
+.tl-item:last-child .tl-line { display:none; }
+.tl-title { font-size:13px; color:var(--text); font-weight:500; }
+.tl-meta { font-size:11px; color:var(--text3); margin-top:2px; }
+
+/* ─── BAR CHART ─── */
+.bar-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.bar-label { font-size:12px; color:var(--text2); font-weight:500; width:130px; flex-shrink:0; }
+.bar-track { flex:1; height:16px; background:var(--bg); border-radius:4px; overflow:hidden; border:1px solid var(--border); }
+.bar-fill { height:100%; border-radius:4px; display:flex; align-items:center; justify-content:flex-end; padding-right:6px; }
+.bar-fill span { font-size:11px; color:#fff; font-weight:600; }
+
+/* ─── EQUIP CARDS ─── */
+.equip-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; transition:all .18s; box-shadow:var(--shadow); }
+.equip-card:hover { border-color:var(--accent); transform:translateY(-1px); box-shadow:0 6px 20px rgba(26,86,219,.12); }
+.equip-card-head { padding:14px 16px; border-bottom:1px solid var(--border); background:var(--bg); display:flex; justify-content:space-between; align-items:flex-start; }
+.equip-card-icon { font-size:22px; margin-bottom:6px; }
+.equip-name { font-size:14px; font-weight:600; color:var(--text); }
+.equip-id { font-size:11px; color:var(--text4); font-family:'IBM Plex Mono',monospace; margin-top:1px; }
+.equip-body { padding:12px 16px; }
+.equip-row { display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; }
+.equip-row .k { color:var(--text3); }
+.equip-row .v { color:var(--text2); font-weight:500; }
+.equip-foot { padding:10px 16px; border-top:1px solid var(--border); display:flex; gap:6px; background:var(--bg); flex-wrap:wrap; }
+
+/* ─── MODAL ─── */
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; align-items:center; justify-content:center; }
+.overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:26px; width:480px; max-width:92vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.18); animation:modal-pop .16s ease; }
+@keyframes modal-pop { from { opacity:0; transform:translateY(-10px) scale(.98); } to { opacity:1; transform:none; } }
+.modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.modal-title { font-size:17px; font-weight:600; color:var(--text); }
+.modal-close { background:var(--bg); border:1px solid var(--border); color:var(--text3); width:28px; height:28px; border-radius:6px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+.modal-close:hover { background:var(--red-soft); color:var(--red); border-color:var(--red); }
+.form-group { margin-bottom:13px; }
+.form-group label { display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:5px; }
+.form-group input, .form-group select, .form-group textarea { width:100%; background:var(--bg); border:1.5px solid var(--border); color:var(--text); padding:8px 12px; border-radius:var(--radius); font-family:'IBM Plex Sans',sans-serif; font-size:13px; outline:none; transition:border-color .15s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(26,86,219,.07); }
+.form-group textarea { resize:vertical; min-height:72px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* ─── TOAST ─── */
+#toastContainer { position:fixed; top:64px; right:18px; z-index:400; display:flex; flex-direction:column; gap:8px; }
+.toast { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:11px 16px; font-size:13px; font-weight:500; color:var(--text); box-shadow:var(--shadow-md); display:flex; align-items:center; gap:9px; animation:toast-in .22s ease; max-width:300px; }
+@keyframes toast-in { from { opacity:0; transform:translateX(14px); } to { opacity:1; transform:none; } }
+@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+.toast.t-success { border-left:3px solid var(--green); }
+.toast.t-error { border-left:3px solid var(--red); }
+.toast.t-info { border-left:3px solid var(--accent); }
+.toast.t-warn { border-left:3px solid var(--amber); }
+
+/* ─── PROFILE ─── */
+.profile-hero { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; display:flex; align-items:center; gap:20px; margin-bottom:18px; box-shadow:var(--shadow); }
+.profile-av { width:60px; height:60px; border-radius:50%; background:var(--accent); color:#fff; font-size:18px; font-weight:600; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.profile-name { font-size:18px; font-weight:600; color:var(--text); }
+.profile-meta { font-size:13px; color:var(--text3); margin-top:3px; }
+.tabs { display:flex; gap:0; border-bottom:1px solid var(--border); margin-bottom:18px; }
+.tab-btn { padding:9px 16px; font-size:13px; background:none; border:none; color:var(--text3); font-family:'IBM Plex Sans',sans-serif; font-weight:500; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .12s; }
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+
+@media(max-width:768px) {
+  .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr; }
+  .form-row { grid-template-columns:1fr; }
+  .main { padding:16px; }
+}
+</style>
+</head>
+<body>
+
+<div id="toastContainer"></div>
+
+<!-- TOPBAR -->
+<div class="topbar" id="topbar" style="display:none">
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="white" stroke-width="1.6"/><circle cx="7" cy="7" r="2" fill="white"/></svg>
+    </div>
+    LabUs
+  </div>
+  <div class="topbar-nav" id="topNav"></div>
+  <div class="topbar-right">
+    <div class="role-pill" id="rolePill"></div>
+    <div class="avatar" id="avatarEl" onclick="showPage('profile')">US</div>
+  </div>
+</div>
+
+<!-- ════ LOGIN ════ -->
+<div class="page active" id="page-login">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-mark">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="white" stroke-width="1.6"/><circle cx="7" cy="7" r="2" fill="white"/></svg>
+        </div>
+        LabUs
+      </div>
+      <div class="auth-sub">Research Equipment Management — University Portal</div>
+      <div class="field"><label>University Email</label><input type="email" id="loginEmail" placeholder="you@university.edu"/></div>
+      <div class="field"><label>Password</label><input type="password" id="loginPw" placeholder="••••••••"/></div>
+      <select id="loginRole"><option value="researcher">Researcher</option><option value="pi">PI</option><option value="supervisor">Supervisor</option><option value="admin">Admin</option><option value="lab">Lab Manager</option><option value="financial">Financial</option></select>
+      <div class="field" id="loginProjectsField" style="display:none">
+        <label>Available Projects</label>
+        <select id="loginProjects">
+          <option>-- Select a project --</option>
+        </select>
+      </div>
+      <button class="btn-primary" onclick="doLogin()">Sign In</button>
+      <div class="auth-switch">New here? <a onclick="showPage('register')">Request access</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ REGISTER ════ -->
+<div class="page" id="page-register">
+  <div class="auth-wrap">
+    <div class="auth-card" style="width:460px">
+      <div class="auth-logo" style="color:var(--purple)">
+        <div class="auth-logo-mark" style="background:var(--purple)">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="white" stroke-width="1.6"/><circle cx="7" cy="7" r="2" fill="white"/></svg>
+        </div>
+        Register
+      </div>
+      <div class="auth-sub">Create your research account to get started.</div>
+      <div class="field"><label>First Name</label><input id="regFirstName" placeholder="Jane"/></div>
+      <div class="field"><label>Last Name</label><input id="regLastName" placeholder="Doe"/></div>
+      <div class="field"><label>Role</label>
+        <select id="regRoleSelect">
+          <option>Researcher</option><option>Financial Department</option>
+        </select>
+      </div>
+      <div class="field"><label>Password</label><input type="password" id="regPassword" placeholder="Minimum 12 characters"/></div>
+      <button class="btn-primary" onclick="registerRequest()">Submit Request</button>
+      <div class="auth-switch">Already have access? <a onclick="showPage('login')">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ HOME (unchanged, functional) ════ -->
+<div class="page" id="page-home">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1 id="homeTitle">Dashboard</h1>
+        <p id="homeSubtitle">Welcome back.</p>
+      </div>
+      <div id="dynamicHomeContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ EQUIPMENT (unchanged) ════ -->
+<div class="page" id="page-equipment">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1>Research Equipment</h1>
+        <p>Browse, reserve, and manage lab equipment</p>
+      </div>
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input id="equipSearch" placeholder="Search equipment…" oninput="filterEquipment()"/>
+        </div>
+        <button class="filter-btn active" onclick="filterEquipByStatus(this,'all')">All</button>
+        <button class="filter-btn" onclick="filterEquipByStatus(this,'available')">Available</button>
+        <button class="filter-btn" onclick="filterEquipByStatus(this,'in-use')">In Use</button>
+        <button class="filter-btn" onclick="filterEquipByStatus(this,'maintenance')">Maintenance</button>
+        <div id="labAddBtn" style="display:none;margin-left:auto"><button class="btn btn-accent btn-sm" onclick="openAddEquipModal()">+ Add Equipment</button></div>
+      </div>
+      <div class="grid-3" id="equipGrid"></div>
+      <div id="equipEmpty" style="display:none;text-align:center;padding:40px;color:var(--text3)">No equipment found.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ RESERVATIONS (تم حذف زر New Reservation) ════ -->
+<div class="page" id="page-reservations">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1 id="resPageTitle">Reservations</h1>
+        <p>Manage equipment bookings</p>
+      </div>
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input id="resSearch" placeholder="Search reservations…" oninput="filterRes()"/>
+        </div>
+        <button class="filter-btn active" onclick="filterResByStatus(this,'all')">All</button>
+        <button class="filter-btn" onclick="filterResByStatus(this,'confirmed')">Confirmed</button>
+        <button class="filter-btn" onclick="filterResByStatus(this,'pending')">Pending</button>
+        <!-- زر New Reservation تم حذفه -->
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="resTable">
+            <thead><tr><th>Equipment</th><th>Date</th><th>Time</th><th>Grant</th><th>Cost</th><th>Status</th><th></th></tr></thead>
+            <tbody id="resTableBody"></tbody>
+          </table>
+        </div>
+        <div id="resEmpty" style="display:none;text-align:center;padding:32px;color:var(--text3)">No reservations match your filter.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PROJECTS (Financial) ════ -->
+<div class="page" id="page-projects">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1>Projects & Grants</h1>
+        <p>Assign grants to projects and manage research funding</p>
+      </div>
+      <div class="action-bar">
+        <div></div>
+        <div class="btn-group">
+          <button class="btn btn-accent btn-sm" onclick="openAssignGrantModal()">+ Assign Grant</button>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Projects</div>
+          <div class="card-sub">Active research projects with assigned grants</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Project</th><th>PI</th><th>Grant</th><th>Budget</th><th></th></tr></thead>
+              <tbody id="projectsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Budget Allocation</div>
+          <div class="card-sub">Usage vs. allocated per grant</div>
+          <div style="margin-top:8px" id="budgetAllocationBars"></div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="openAssignBudgetModal()">Assign Budget</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ USERS (Admin) ════ -->
+<div class="page" id="page-users">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1>User Management</h1>
+        <p>Manage researchers, PIs, supervisors, and staff</p>
+      </div>
+      <div class="search-row">
+        <div class="search-input-wrap" style="max-width:360px">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <input id="userSearch" placeholder="Search by name, email, or role…" oninput="filterUsers()"/>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openIssueCreditModal()">Issue Credits</button>
+          <button class="btn btn-accent btn-sm" onclick="openAddUserModal()">+ Add User</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Role</th><th>Department</th><th>Status</th><th>Last Active</th><th></th><tr></thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+        <div id="usersEmpty" style="display:none;text-align:center;padding:32px;color:var(--text3)">No users match your search.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ASSIGNMENTS (Supervisor) ════ -->
+<div class="page" id="page-assignments">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1>Project Assignments</h1>
+        <p>Assign researchers to projects and manage supervisory assignments</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Assign Researcher to Project</div>
+          <div class="card-sub">Assign a researcher to a supervised project</div>
+          <div class="form-group"><label>Project</label><select id="assignProjectSelect"></select></div>
+          <div class="form-group"><label>Researcher</label><select id="assignResearcherSelect"></select></div>
+          <div class="form-group"><label>Role on Project</label><select id="assignRoleSelect"><option>Primary Researcher</option><option>Co-Investigator</option><option>Lab Technician</option></select></div>
+          <button class="btn btn-accent btn-sm" onclick="assignResearcherToProject()">Assign Researcher</button>
+        </div>
+        <div class="card">
+          <div class="card-title">My Project Assignments</div>
+          <div class="card-sub">Pending and accepted supervisory roles</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Project</th><th>Researchers</th><th>Status</th><th></th></tr></thead>
+              <tbody id="myAssignmentsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ANALYTICS (simplified) ════ -->
+<div class="page" id="page-analytics">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1>Analytics Dashboard</h1>
+        <p>Simplified utilization metrics</p>
+      </div>
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="stat-card"><div class="stat-label">Avg. Utilization</div><div class="stat-value" id="analyticsUtil">0%</div></div>
+        <div class="stat-card"><div class="stat-label">Active Equipment</div><div class="stat-value" id="analyticsActiveEq">0</div></div>
+        <div class="stat-card"><div class="stat-label">Revenue (MTD)</div><div class="stat-value" id="analyticsRevenue">$0</div></div>
+        <div class="stat-card"><div class="stat-label">Active Researchers</div><div class="stat-value" id="analyticsResearchers">0</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Equipment Utilization (30 days)</div>
+        <div id="analyticsBars"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PROFILE (extra fields, no assign budget) ════ -->
+<div class="page" id="page-profile">
+  <div style="display:flex;flex:1">
+    <div class="main" style="max-width:100%">
+      <div class="page-header">
+        <h1>Profile</h1>
+        <p>Manage your account details</p>
+      </div>
+      <div class="profile-hero">
+        <div class="profile-av" id="profAv">US</div>
+        <div style="flex:1">
+          <div class="profile-name" id="profName">User Name</div>
+          <div class="profile-meta" id="profMeta">Role — Department</div>
+        </div>
+        <button class="btn btn-ghost" onclick="openEditProfileModal()">Edit Profile</button>
+      </div>
+      <div id="profileDynamicContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PROFILE MODAL (new interactive modal) -->
+<div class="overlay" id="editProfileModal">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Edit Profile</div><button class="modal-close" onclick="closeModal('editProfileModal')">×</button></div>
+    <div class="form-group"><label>Full Name</label><input id="editProfileName"></div>
+    <div class="form-group"><label>Username</label><input id="editProfileUsername" placeholder="Enter your username"></div>
+    <div class="btn-group" style="justify-content:flex-end"><button class="btn btn-ghost" onclick="closeModal('editProfileModal')">Cancel</button><button class="btn btn-accent" onclick="saveProfileFromModal()">Save Changes</button></div>
+  </div>
+</div>
+
+<!-- باقي المودالات كما هي (لم يتم تغييرها) -->
+<div class="overlay" id="startModal"><div class="modal"><div class="modal-head"><div class="modal-title">Start Session</div><button class="modal-close" onclick="closeModal('startModal')">×</button></div><div class="form-group"><label>Equipment</label><select id="startEquipSelect"></select></div><div class="form-row"><div class="form-group"><label>Start Time</label><input type="time" id="startTime" value="09:00"/></div><div class="form-group"><label>Expected End</label><input type="time" id="endTime" value="11:30"/></div></div><div class="form-group"><label>Grant</label><select id="startGrantSelect"><option>NSF-2024-089</option><option>NIH-2023-445</option><option>DOE-2024-001</option></select></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('startModal')">Cancel</button><button class="btn btn-accent" onclick="startSessionSubmit()">Start Session</button></div></div></div>
+
+<div class="overlay" id="checkinModal"><div class="modal"><div class="modal-head"><div class="modal-title">Check In</div><button class="modal-close" onclick="closeModal('checkinModal')">×</button></div><div class="alert alert-info">Checking in to active session</div><div class="form-group"><label>Observations</label><textarea id="checkinNotes" placeholder="Note any issues…"></textarea></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('checkinModal')">Cancel</button><button class="btn btn-green" onclick="checkinSubmit()">Confirm Check-In</button></div></div></div>
+
+<div class="overlay" id="confirmReceiptModal"><div class="modal"><div class="modal-head"><div class="modal-title">Confirm Receipt</div><button class="modal-close" onclick="closeModal('confirmReceiptModal')">×</button></div><div class="alert alert-info">Select receipt to confirm</div><div class="form-group"><label>Session</label><select id="receiptSessionSelect" onchange="updateReceiptDetails()"></select></div><div class="form-group"><label>Billed Amount</label><input id="receiptAmount" readonly/></div><div class="form-group"><label>Grant Charged</label><input id="receiptGrant" readonly/></div><div id="receiptConfirmResult" style="display:none;margin-bottom:12px"></div><div id="receiptAiAnalysis" style="display:none;margin-bottom:12px"></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px;flex-wrap:wrap;gap:6px"><button class="btn btn-ghost" onclick="openChallengeBillModal();closeModal('confirmReceiptModal')">Challenge Bill</button><button class="btn btn-green" id="confirmReceiptBtn" onclick="confirmReceiptSubmit()">Confirm Receipt</button></div></div></div>
+
+<div class="overlay" id="challengeBillModal"><div class="modal"><div class="modal-head"><div class="modal-title">Challenge a Bill</div><button class="modal-close" onclick="closeModal('challengeBillModal')">×</button></div><div class="form-group"><label>Session to Challenge</label><select id="challengeSessionSelect"></select></div><div class="form-group"><label>Reason</label><select id="challengeReason"><option>Session ended early</option><option>Equipment malfunction</option><option>Incorrect rate</option><option>Unauthorized charge</option><option>Other</option></select></div><div class="form-group"><label>Details</label><textarea id="challengeDetails" placeholder="Describe issue…"></textarea></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('challengeBillModal')">Cancel</button><button class="btn btn-amber" onclick="submitChallenge()">Submit Challenge</button></div></div></div>
+
+<div class="overlay" id="linkPaperModal"><div class="modal"><div class="modal-head"><div class="modal-title">Link Research Paper</div><button class="modal-close" onclick="closeModal('linkPaperModal')">×</button></div><div class="form-group"><label>Paper Title</label><input id="paperTitle" placeholder="Enter full paper title…"/></div><div class="form-group"><label>DOI / URL</label><input id="paperDoi" placeholder="10.1234/…"/></div><div class="form-group"><label>Equipment Used</label><select id="paperEquipSelect"></select></div><div class="form-group"><label>Grant</label><select id="paperGrantSelect"><option>NSF-2024-089</option><option>NIH-2023-445</option></select></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('linkPaperModal')">Cancel</button><button class="btn btn-accent" onclick="linkPaperSubmit()">Link Paper</button></div></div></div>
+
+<div class="overlay" id="newResModal"><div class="modal"><div class="modal-head"><div class="modal-title">New Reservation</div><button class="modal-close" onclick="closeModal('newResModal')">×</button></div><div class="form-group"><label>Equipment</label><select id="newResEquipSelect"></select></div><div class="form-row"><div class="form-group"><label>Date</label><input type="date" id="newResDate"/></div><div class="form-group"><label>Grant</label><select id="newResGrantSelect"><option>NSF-2024-089</option><option>NIH-2023-445</option><option>DOE-2024-001</option></select></div></div><div class="form-row"><div class="form-group"><label>Start Time</label><input type="time" id="newResStart"/></div><div class="form-group"><label>End Time</label><input type="time" id="newResEnd"/></div></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('newResModal')">Cancel</button><button class="btn btn-accent" onclick="submitNewReservation()">Submit Reservation</button></div></div></div>
+
+<div class="overlay" id="piApproveModal"><div class="modal"><div class="modal-head"><div class="modal-title">Authorize Reservation</div><button class="modal-close" onclick="closeModal('piApproveModal')">×</button></div><div class="alert alert-info" id="piApproveInfo"></div><div class="form-group"><label>Choose Grant</label><select id="piApproveGrantSelect"><option>NSF-2024-089</option><option>NIH-2023-445</option><option>DOE-2024-001</option></select></div><div class="form-group"><label>Notes</label><textarea id="piApproveNotes" placeholder="Notes for researcher…"></textarea></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('piApproveModal')">Cancel</button><button class="btn btn-green" onclick="approveReservationSubmit()">Authorize</button></div></div></div>
+
+<div class="overlay" id="addEquipModal"><div class="modal"><div class="modal-head"><div class="modal-title">Add Equipment</div><button class="modal-close" onclick="closeModal('addEquipModal')">×</button></div><div class="form-row"><div class="form-group"><label>Equipment Name</label><input id="newEquipName" placeholder="e.g. Confocal C"/></div><div class="form-group"><label>Category</label><select id="newEquipCat"><option>Microscopy</option><option>Sequencing</option><option>Computing</option></select></div></div><div class="form-row"><div class="form-group"><label>Rate (Price/Hour)</label><input id="newEquipRate" placeholder="$85/hour"/></div><div class="form-group"><label>Location</label><input id="newEquipLoc" placeholder="Lab B"/></div></div><div class="form-group"><label>Required Certification</label><select id="newEquipCert"><option>None</option><option>BSL-2</option><option>Radiation Safety</option><option>Confocal Cert</option></select></div><div class="form-group"><label>Initial State</label><select id="newEquipState"><option>available</option><option>offline</option><option>maintenance</option></select></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('addEquipModal')">Cancel</button><button class="btn btn-accent" onclick="addEquipmentSubmit()">Add Equipment</button></div></div></div>
+
+<div class="overlay" id="updateEquipModal"><div class="modal"><div class="modal-head"><div class="modal-title">Update Equipment</div><button class="modal-close" onclick="closeModal('updateEquipModal')">×</button></div><div class="form-group"><label>Equipment</label><select id="updateEquipSelect"></select></div><div class="form-group"><label>Change State</label><select id="updateEquipState"><option>available</option><option>in-use</option><option>maintenance</option><option>locked-out</option><option>offline</option></select></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('updateEquipModal')">Cancel</button><button class="btn btn-accent" onclick="updateEquipmentSubmit()">Save Changes</button><button class="btn btn-red" onclick="removeEquipmentSubmit()">Remove Equipment</button></div></div></div>
+
+<div class="overlay" id="reportAccidentModal"><div class="modal"><div class="modal-head"><div class="modal-title">Report Accident</div><button class="modal-close" onclick="closeModal('reportAccidentModal')">×</button></div><div class="form-group"><label>Equipment</label><select id="accidentEquipSelect"></select></div><div class="form-group"><label>Date & Time</label><input type="datetime-local" id="accidentDateTime"/></div><div class="form-group"><label>Description</label><textarea id="accidentDesc" placeholder="Describe incident…"></textarea></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('reportAccidentModal')">Cancel</button><button class="btn btn-red" onclick="reportAccidentSubmit()">Submit Report</button></div></div></div>
+
+<div class="overlay" id="assignGrantModal"><div class="modal"><div class="modal-head"><div class="modal-title">Assign Grant to Project</div><button class="modal-close" onclick="closeModal('assignGrantModal')">×</button></div><div class="form-group"><label>Project</label><select id="assignGrantProjectSelect"></select></div><div class="form-group"><label>Allocated Budget (%)</label><input type="number" id="assignGrantBudget" placeholder="e.g. 50" min="0" max="100"/></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('assignGrantModal')">Cancel</button><button class="btn btn-accent" onclick="assignGrantToProjectSubmit()">Assign</button></div></div></div>
+
+<div class="overlay" id="newProjectModal"><div class="modal"><div class="modal-head"><div class="modal-title">New Project</div><button class="modal-close" onclick="closeModal('newProjectModal')">×</button></div><div class="form-group"><label>Project Name</label><input id="newProjectName" placeholder="e.g. Protein Study"/></div><div class="form-group"><label>Principal Investigator</label><select id="newProjectPi"></select></div><div class="form-group"><label>Department</label><select id="newProjectDept"><option>Biochemistry</option><option>Molecular Biology</option><option>Physics</option></select></div><div class="form-group"><label>Start Date</label><input type="date" id="newProjectStart"/></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('newProjectModal')">Cancel</button><button class="btn btn-accent" onclick="createNewProject()">Create Project</button></div></div></div>
+
+<div class="overlay" id="assignBudgetModal"><div class="modal"><div class="modal-head"><div class="modal-title">Assign Budget</div><button class="modal-close" onclick="closeModal('assignBudgetModal')">×</button></div><div class="form-group"><label>Grant</label><select id="assignBudgetGrantSelect"><option>NSF-2024-089</option><option>NIH-2023-445</option><option>DOE-2024-001</option></select></div><div class="form-group"><label>Total Budget ($)</label><input type="number" id="assignBudgetTotal" placeholder="e.g. 500000"/></div><div class="form-group"><label>Overhead Rate (%)</label><input type="number" id="assignBudgetOverhead" placeholder="26" value="26"/></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('assignBudgetModal')">Cancel</button><button class="btn btn-accent" onclick="assignBudgetSubmit()">Assign Budget</button></div></div></div>
+
+<div class="overlay" id="assignAcceptModal"><div class="modal"><div class="modal-head"><div class="modal-title">Accept Project Assignment</div><button class="modal-close" onclick="closeModal('assignAcceptModal')">×</button></div><div class="alert alert-info" id="assignAcceptInfo"></div><div class="form-group"><label>Researchers</label><input id="assignAcceptResearchers" readonly/></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="declineCurrentAssignment()">Decline</button><button class="btn btn-green" onclick="acceptCurrentAssignment()">Accept Assignment</button></div></div></div>
+
+<div class="overlay" id="addUserModal"><div class="modal"><div class="modal-head"><div class="modal-title">Add User</div><button class="modal-close" onclick="closeModal('addUserModal')">×</button></div><div class="form-row"><div class="form-group"><label>First Name</label><input id="addUserFirst"/></div><div class="form-group"><label>Last Name</label><input id="addUserLast"/></div></div><div class="form-group"><label>Email</label><input type="email" id="addUserEmail"/></div><div class="form-row"><div class="form-group"><label>Role</label><select id="addUserRole"><option>researcher</option><option>pi</option><option>supervisor</option><option>lab</option><option>admin</option><option>financial</option></select></div><div class="form-group"><label>Department</label><select id="addUserDept"><option>Biochemistry</option><option>Molecular Biology</option><option>Physics</option></select></div></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('addUserModal')">Cancel</button><button class="btn btn-accent" onclick="addUserSubmit()">Add User</button></div></div></div>
+
+<div class="overlay" id="editUserModal"><div class="modal"><div class="modal-head"><div class="modal-title">Edit User</div><button class="modal-close" onclick="closeModal('editUserModal')">×</button></div><div class="form-group"><label>Full Name</label><input id="editUserName"/></div><div class="form-group"><label>Email</label><input id="editUserEmail"/></div><div class="form-row"><div class="form-group"><label>Role</label><select id="editUserRole"><option>researcher</option><option>pi</option><option>supervisor</option><option>lab</option><option>admin</option><option>financial</option></select></div><div class="form-group"><label>Status</label><select id="editUserStatus"><option>Active</option><option>Suspended</option></select></div></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('editUserModal')">Cancel</button><button class="btn btn-accent" onclick="updateUserSubmit()">Save</button></div></div></div>
+
+<div class="overlay" id="issueCreditModal"><div class="modal"><div class="modal-head"><div class="modal-title">Issue Credits</div><button class="modal-close" onclick="closeModal('issueCreditModal')">×</button></div><div class="form-group"><label>Researcher</label><select id="creditResearcherSelect"></select></div><div class="form-group"><label>Amount ($)</label><input type="number" id="creditAmount" placeholder="200"/></div><div class="form-group"><label>Reason</label><select id="creditReason"><option>Equipment Malfunction</option><option>Session Interruption</option><option>Overbilled</option><option>Adjustment</option></select></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('issueCreditModal')">Cancel</button><button class="btn btn-accent" onclick="issueCreditSubmit()">Issue Credit</button></div></div></div>
+
+<div class="overlay" id="uploadCertModal"><div class="modal"><div class="modal-head"><div class="modal-title">Upload Certificate</div><button class="modal-close" onclick="closeModal('uploadCertModal')">×</button></div><div class="form-group"><label>Certificate Type</label><select id="certType"><option>BSL-2 Safety</option><option>Radiation Safety</option><option>DNA Sequencer Cert.</option><option>Other</option></select></div><div class="form-group"><label>Issued By</label><input id="certIssuer" placeholder="EHS Office"/></div><div class="form-row"><div class="form-group"><label>Issue Date</label><input type="date" id="certIssueDate"/></div><div class="form-group"><label>Expiry Date</label><input type="date" id="certExpiryDate"/></div></div><div class="form-group"><label>File (PDF)</label><input type="file" accept=".pdf" id="certFile"/></div><div class="btn-group" style="justify-content:flex-end;margin-top:6px"><button class="btn btn-ghost" onclick="closeModal('uploadCertModal')">Cancel</button><button class="btn btn-accent" onclick="uploadCertificateSubmit()">Upload</button></div></div></div>
+
+<div class="overlay" id="viewReservationModal">
+  <div class="modal" style="width:520px">
+    <div class="modal-head">
+      <div class="modal-title">Reservation Details</div>
+      <button class="modal-close" onclick="closeModal('viewReservationModal')">×</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Equipment</div><div style="font-weight:600;color:var(--text)" id="vrEquip">—</div></div>
+      <div><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Researcher</div><div style="color:var(--text2)" id="vrResearcher">—</div></div>
+      <div><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Date</div><div style="color:var(--text2)" id="vrDate">—</div></div>
+      <div><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Time</div><div style="color:var(--text2)" id="vrTime">—</div></div>
+      <div><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Grant</div><div style="color:var(--text2)" id="vrGrant">—</div></div>
+      <div><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Cost</div><div style="color:var(--text2)" id="vrCost">—</div></div>
+      <div id="vrSupervisorDiv" style="display:none"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Supervisor</div><div style="color:var(--text2)" id="vrSupervisor">—</div></div>
+    </div>
+    <div style="margin-bottom:16px"><div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Status</div><div id="vrStatus"></div></div>
+    <div class="btn-group" style="justify-content:flex-end;flex-wrap:wrap;gap:6px" id="vrActionBar"></div>
+  </div>
+</div>
+
+<script>
+// ---------- DATA ----------
+let equipment = [
+  { id:'EQ-001', name:'Confocal Microscope A', icon:'🔬', cat:'Microscopy', status:'available', rate:'$85/hour', loc:'Lab A, Room 201', cert:'Confocal Op. Cert.', supervisor:false },
+  { id:'EQ-002', name:'DNA Sequencer X1', icon:'🧬', cat:'Sequencing', status:'available', rate:'$125/hour', loc:'Lab B, Room 310', cert:'DNA Sequencer Cert.', supervisor:true },
+  { id:'EQ-003', name:'GPU Cluster Node-7', icon:'💻', cat:'Computing', status:'in-use', rate:'$45/hour', loc:'Server Room 1', cert:'None', supervisor:false },
+  { id:'EQ-004', name:'Electron Microscope B2', icon:'🔭', cat:'Microscopy', status:'available', rate:'$95/hour', loc:'Lab A, Room 205', cert:'BSL-2 Safety', supervisor:true },
+  { id:'EQ-005', name:'Mass Spectrometer M3', icon:'⚗️', cat:'Spectroscopy', status:'maintenance', rate:'$75/hour', loc:'Lab C, Room 118', cert:'Radiation Safety', supervisor:false },
+  { id:'EQ-006', name:'NMR Spectrometer', icon:'🧲', cat:'Spectroscopy', status:'available', rate:'$65/hour', loc:'Lab C, Room 120', cert:'Radiation Safety', supervisor:false }
+];
+
+let reservations = [
+  { id:'R1', equip:'Confocal Microscope A', researcher:'Dr. Jane Doe', date:'Nov 28, 2024', time:'09:00–11:30', grant:'NSF-2024-089', cost:'$420', status:'confirmed', statusClass:'bg', statusStr:'confirmed' },
+  { id:'R2', equip:'DNA Sequencer X1', researcher:'Alex Kim', date:'Nov 29, 2024', time:'14:00–17:00', grant:'NIH-2023-445', cost:'$620', status:'pending', statusClass:'by', statusStr:'pending' },
+  { id:'R3', equip:'GPU Cluster Node-7', researcher:'Maria Lopez', date:'Dec 1, 2024', time:'19:00–22:00', grant:'NSF-2024-089', cost:'$540', status:'confirmed', statusClass:'bg', statusStr:'confirmed' },
+  { id:'R4', equip:'Electron Microscope B2', researcher:'Dr. Jane Doe', date:'Dec 3, 2024', time:'10:00–13:00', grant:'DOE-2024-001', cost:'$380', status:'confirmed', statusClass:'bg', statusStr:'confirmed' }
+];
+
+let users = [
+  { id:'U1', name:'Dr. Jane Doe', email:'jane.doe@univ.edu', role:'researcher', department:'Biochemistry', status:'Active', credits:0, certs:[], phone:'+1 617 555 0101', staffId:'RES-2019-0441' },
+  { id:'U2', name:'Prof. Michael Chen', email:'m.chen@univ.edu', role:'pi', department:'Biochemistry', status:'Active', credits:0, certs:[], phone:'', staffId:'PI-2015-0032' },
+  { id:'U3', name:'Alex Kim', email:'a.kim@univ.edu', role:'researcher', department:'Molecular Biology', status:'Active', credits:0, certs:[], phone:'', staffId:'RES-2020-0223' },
+  { id:'U4', name:'Tom Richards', email:'t.richards@univ.edu', role:'lab', department:'Core Facilities', status:'Active', credits:0, certs:[], phone:'', staffId:'LM-2017-0088' },
+  { id:'U5', name:'Dr. Sara Hassan', email:'s.hassan@univ.edu', role:'supervisor', department:'Biomedical Eng.', status:'Active', credits:0, certs:[], phone:'', staffId:'SUP-2018-0112' },
+  { id:'U6', name:'Admin User', email:'admin@univ.edu', role:'admin', department:'Administration', status:'Active', credits:0, certs:[], phone:'', staffId:'ADM-2020-0001' },
+  { id:'U7', name:'Finance Lead', email:'finance@univ.edu', role:'financial', department:'Finance', status:'Active', credits:0, certs:[], phone:'', staffId:'FIN-2021-0054' }
+];
+
+let grants = [
+  { id:'NSF-2024-089', pi:'Prof. Michael Chen', total:500000, used:312400, remaining:187600, expires:'Jun 2025' },
+  { id:'NIH-2023-445', pi:'Prof. Sarah Williams', total:750000, used:698200, remaining:51800, expires:'Jan 2025' },
+  { id:'DOE-2024-001', pi:'Dr. Ahmed Hassan', total:320000, used:88000, remaining:232000, expires:'Dec 2026' },
+  { id:'NSF-2024-199', pi:'Prof. Emily Rodriguez', total:200000, used:199800, remaining:200, expires:'Dec 2024' }
+];
+
+let projects = [
+  { name:'Membrane Protein Study', pi:'Prof. Michael Chen', grantId:'NSF-2024-089', budget:500000 },
+  { name:'Genomics Pipeline', pi:'Prof. Sarah Williams', grantId:'NIH-2023-445', budget:750000 },
+  { name:'Energy Materials', pi:'Dr. Ahmed Hassan', grantId:'DOE-2024-001', budget:320000 }
+];
+
+let assignments = [
+  { id:'A1', project:'Membrane Protein Study', supervisor:'Dr. Sara Hassan', status:'pending', researchers:['Dr. Jane Doe', 'Alex Kim', 'Maria Lopez'] },
+  { id:'A2', project:'CRISPR Optimization', supervisor:'Dr. Sara Hassan', status:'pending', researchers:['Sam Park', 'Elena Wu'] }
+];
+
+let sessions = [];
+let receipts = [];
+let disputes = [];
+let linkedPapers = [];
+
+let currentUser = null, currentRole = '';
+let equipFilter = 'all', resFilter = 'all';
+
+// ---------- HELPERS ----------
+function toast(msg, type='info') {
+  let div = document.createElement('div');
+  div.className = `toast t-${type}`;
+  div.innerHTML = `<span>${type==='success'?'✓':type==='error'?'✕':type==='warn'?'⚠':'ℹ'}</span><span>${msg}</span>`;
+  document.getElementById('toastContainer').appendChild(div);
+  setTimeout(() => div.remove(), 3200);
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${pageId}`).classList.add('active');
+  if (pageId === 'home') renderHome();
+  else if (pageId === 'equipment') renderEquipment();
+  else if (pageId === 'reservations') renderReservations();
+  else if (pageId === 'projects') renderProjects();
+  else if (pageId === 'users') renderUsers();
+  else if (pageId === 'assignments') renderAssignments();
+  else if (pageId === 'analytics') renderAnalytics();
+  else if (pageId === 'profile') renderProfile();
+}
+
+// ---------- LOGIN (stores data into currentUser) ----------
+    function doLogin() {
+
+        buildNav();
+
+        let landingPage = 'home';
+
+        showPage(landingPage);
+
+        toast(`Welcome back, ${existing.name}!`, 'success');
+    }
+
+// ---------- REGISTER (without university email, creates email from name) ----------
+function registerRequest() {
+  let firstName = document.getElementById('regFirstName').value;
+  let lastName = document.getElementById('regLastName').value;
+  let dept = document.getElementById('regDepartment').value;
+  let roleSelect = document.getElementById('regRoleSelect').value;
+  let supervisor = document.getElementById('regSupervisor').value;
+  let password = document.getElementById('regPassword').value;
+  if (firstName && lastName) {
+    let fullName = firstName + ' ' + lastName;
+    let role = 'researcher'; // all registered as researcher for simplicity
+    let generatedEmail = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '@university.edu';
+    let staffId = 'RES-'+Math.floor(Math.random()*10000);
+    users.push({ id:'U'+Date.now(), name:fullName, email:generatedEmail, role, department:dept, status:'Pending', credits:0, certs:[], phone:'', staffId });
+    toast('Registration submitted — awaiting PI approval', 'success');
+    showPage('login');
+  } else toast('Please fill all fields', 'error');
+}
+
+function buildNav() {
+  let navItems = [];
+  if (currentRole === 'lab') {
+    navItems.push('equipment');
+  } else if (currentRole === 'financial') {
+    navItems.push('projects');
+  } else {
+    navItems.push('home', 'equipment', 'reservations');
+  }
+  if (currentRole === 'admin') navItems.push('users', 'analytics');
+  if (currentRole === 'supervisor') navItems.push('assignments');
+  navItems.push('profile');
+  let container = document.getElementById('topNav');
+  container.innerHTML = '';
+  navItems.forEach(item => {
+    let btn = document.createElement('button');
+    btn.className = 'nav-btn';
+    btn.innerText = item.charAt(0).toUpperCase() + item.slice(1);
+    btn.onclick = () => showPage(item);
+    container.appendChild(btn);
+  });
+}
+
+// ---------- HOME (simplified but functional) ----------
+function renderHome() {
+  let content = '';
+  if (currentRole === 'researcher') {
+    let activeSessions = sessions.filter(s => s.researcher === currentUser.name && !s.endTime).length;
+    content = `<div class="alert alert-info">You have ${activeSessions} active session(s).</div>
+      <div class="grid-4"><div class="stat-card"><div class="stat-label">Usage</div><div class="stat-value">34.5h</div></div>
+      <div class="stat-card"><div class="stat-label">Grant Balance</div><div class="stat-value">$42K</div></div>
+      <div class="stat-card"><div class="stat-label">Reservations</div><div class="stat-value">${reservations.filter(r=>r.researcher===currentUser.name).length}</div></div>
+      <div class="stat-card"><div class="stat-label">Active Certs</div><div class="stat-value">${currentUser.certs.length}</div></div></div>
+      <div class="grid-2"><div class="card"><div class="card-title">Today's Sessions</div><div class="btn-group"><button class="btn btn-accent btn-sm" onclick="openStartSessionModal()">Start Session</button><button class="btn btn-ghost btn-sm" onclick="openLinkPaperModal()">Link Paper</button></div></div>
+      <div class="card"><div class="card-title">Recent Activity</div><div class="timeline"><div class="tl-item"><div class="tl-left"><div class="tl-dot filled"></div></div><div>Session completed</div></div></div></div></div>`;
+  } else if (currentRole === 'pi') {
+    content = `<div class="alert alert-warn">${reservations.filter(r=>r.status==='pending').length} pending</div><div class="card"><div id="piPendingList"></div></div>`;
+  } else if (currentRole === 'admin') {
+    content = `<div class="card"><button class="btn btn-accent" onclick="showPage('analytics')">View Analytics</button></div>`;
+  } else if (currentRole === 'lab') {
+    content = `<div class="card"><div class="btn-group"><button class="btn btn-accent" onclick="openAddEquipModal()">Add Equipment</button><button class="btn btn-ghost" onclick="openUpdateEquipModal()">Update/Remove</button><button class="btn btn-red" onclick="openReportAccidentForCurrent()">Report Accident</button></div></div>`;
+  } else if (currentRole === 'supervisor') {
+    content = `<div id="supDashboard"></div>`;
+  } else if (currentRole === 'financial') {
+    content = `<div class="grid-4" style="margin-bottom:16px">
+      <div class="stat-card"><div class="stat-label">Total Grants</div><div class="stat-value">${grants.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Total Budget</div><div class="stat-value">$${(grants.reduce((s,g)=>s+g.total,0)/1000).toFixed(0)}K</div></div>
+      <div class="stat-card"><div class="stat-label">Used</div><div class="stat-value" style="color:var(--amber)">$${(grants.reduce((s,g)=>s+g.used,0)/1000).toFixed(0)}K</div></div>
+      <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" style="color:var(--green)">$${(grants.reduce((s,g)=>s+g.remaining,0)/1000).toFixed(0)}K</div></div>
+    </div>
+    <div class="card"><div class="card-title">Quick Actions</div><div class="btn-group" style="margin-top:8px"><button class="btn btn-accent" onclick="showPage('projects')">Assign Grant</button></div></div>`;
+  }
+  document.getElementById('dynamicHomeContent').innerHTML = content;
+  if (currentRole === 'pi') renderPiPending();
+  if (currentRole === 'supervisor') renderSupervisorHome();
+}
+function renderPiPending() { let pending = reservations.filter(r=>r.status==='pending'); let tbody=document.getElementById('piPendingList'); if(tbody) tbody.innerHTML=pending.map(r=>`<div>${r.researcher} - ${r.equip} - ${r.cost} <button class="btn btn-sm btn-green" onclick="openPiApprove('${r.id}')">Authorize</button></div>`).join(''); }
+function openPiApprove(id){ window.pendingResId=id; let r=reservations.find(r=>r.id===id); document.getElementById('piApproveInfo').innerHTML=`Authorizing: ${r.researcher} - ${r.equip}`; openModal('piApproveModal'); }
+function approveReservationSubmit(){ let grant=document.getElementById('piApproveGrantSelect').value; let r=reservations.find(r=>r.id===window.pendingResId); if(r){ r.status='confirmed'; r.grant=grant; toast('Authorized','success'); renderPiPending(); renderReservations(); renderHome(); } closeModal('piApproveModal'); }
+function rejectReservation(id){ reservations=reservations.filter(r=>r.id!==id); toast('Rejected','error'); renderPiPending(); renderReservations(); renderHome(); }
+function renderSupervisorHome(){ 
+  let pending=assignments.filter(a=>a.supervisor===currentUser?.name&&a.status==='pending');
+  let accepted=assignments.filter(a=>a.supervisor===currentUser?.name&&a.status==='accepted');
+  let allMyAssign=assignments.filter(a=>a.supervisor===currentUser?.name);
+  let html=`
+  <div class="grid-4" style="margin-bottom:16px">
+    <div class="stat-card"><div class="stat-label">Total Assignments</div><div class="stat-value">${allMyAssign.length}</div><div class="stat-note">Supervised projects</div></div>
+    <div class="stat-card"><div class="stat-label">Pending Review</div><div class="stat-value" style="color:var(--amber)">${pending.length}</div><div class="stat-note">Awaiting your action</div></div>
+    <div class="stat-card"><div class="stat-label">Active Projects</div><div class="stat-value" style="color:var(--green)">${accepted.length}</div><div class="stat-note">Accepted & running</div></div>
+    <div class="stat-card"><div class="stat-label">Researchers</div><div class="stat-value">${[...new Set(allMyAssign.flatMap(a=>a.researchers))].length}</div><div class="stat-note">Under supervision</div></div>
+  </div>`;
+  if(pending.length>0){
+    html+=`<div class="card" style="margin-bottom:14px;border-left:3px solid var(--amber)">
+      <div class="card-title" style="display:flex;align-items:center;gap:8px">⚠️ Pending Assignment Requests <span class="badge by">${pending.length} new</span></div>
+      <div class="card-sub">These projects require your acceptance to proceed</div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+      ${pending.map(a=>`<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-weight:600;color:var(--text)">${a.project}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:3px">Researchers: ${a.researchers.join(', ')}</div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-xs btn-ghost" onclick="openAssignAccept('${a.id}')">View Details</button>
+          <button class="btn btn-xs btn-green" onclick="quickAcceptAssignment('${a.id}')">✓ Accept</button>
+          <button class="btn btn-xs btn-red" onclick="declineAssignmentById('${a.id}')">✕ Decline</button>
+        </div>
+      </div>`).join('')}
+      </div>
+    </div>`;
+  } else {
+    html+=`<div class="alert alert-success" style="margin-bottom:14px">✓ No pending assignment requests at this time.</div>`;
+  }
+  if(accepted.length>0){
+    html+=`<div class="card">
+      <div class="card-title">Active Supervised Projects</div>
+      <div class="card-sub">Projects you are currently supervising</div>
+      <div class="table-wrap" style="margin-top:10px">
+        <table>
+          <thead><tr><th>Project</th><th>Researchers</th><th>Status</th></tr></thead>
+          <tbody>
+            ${accepted.map(a=>`<tr><td class="bold">${a.project}</td><td style="font-size:12px">${a.researchers.join(', ')}</td><td><span class="badge bg"><span class="badge-dot"></span>Active</span></td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+  document.getElementById('supDashboard') && (document.getElementById('supDashboard').innerHTML = html);
+}
+function quickAcceptAssignment(id){ let a=assignments.find(a=>a.id===id); if(a){ a.status='accepted'; toast(`Accepted: ${a.project}`,'success'); renderSupervisorHome(); renderAssignments(); } }
+function openAssignAccept(id){ window.currentAssignId=id; let a=assignments.find(a=>a.id===id); document.getElementById('assignAcceptInfo').innerHTML=`Supervisor for ${a.project}`; document.getElementById('assignAcceptResearchers').value=a.researchers.join(', '); openModal('assignAcceptModal'); }
+function acceptCurrentAssignment(){ let a=assignments.find(a=>a.id===window.currentAssignId); if(a){ a.status='accepted'; toast('Accepted','success'); renderSupervisorHome(); renderAssignments(); renderHome(); } closeModal('assignAcceptModal'); }
+function declineCurrentAssignment(){ assignments=assignments.filter(a=>a.id!==window.currentAssignId); toast('Declined','error'); renderSupervisorHome(); renderAssignments(); renderHome(); closeModal('assignAcceptModal'); }
+function declineAssignmentById(id){ assignments=assignments.filter(a=>a.id!==id); toast('Declined','error'); renderSupervisorHome(); renderAssignments(); renderHome(); }
+function refreshSupervisor(){ renderSupervisorHome(); }
+
+// ---------- EQUIPMENT ----------
+function renderEquipment(){ let q=document.getElementById('equipSearch')?.value.toLowerCase()||''; let filtered=equipment.filter(e=>(equipFilter==='all'||e.status===equipFilter)&&(!q||e.name.toLowerCase().includes(q))); let grid=document.getElementById('equipGrid'); if(!grid)return; if(filtered.length===0){document.getElementById('equipEmpty').style.display='';grid.innerHTML='';return;} document.getElementById('equipEmpty').style.display='none'; grid.innerHTML=filtered.map(e=>{let sClass=e.status==='available'?'bg':e.status==='in-use'?'bb':'br'; let sLabel=e.status==='available'?'Available':e.status==='in-use'?'In Use':'Maintenance'; let foot=''; let supervisorBadge=e.supervisor?'<span class="badge by" style="margin-top:8px"><span class="badge-dot"></span>Supervisor Required</span>':''; if(e.status==='available' && currentRole==='researcher') foot+=`<button class="btn btn-sm btn-accent" onclick="openNewResForEquip('${e.name}')">Reserve</button>`; if(currentRole==='lab'){ foot+=`<button class="btn btn-sm btn-ghost" onclick="openUpdateEquipForId('${e.id}')">Update</button><button class="btn btn-sm btn-ghost" onclick="openMaintForId('${e.id}')">Maintenance</button><button class="btn btn-sm btn-red" onclick="removeEquipmentById('${e.id}')">Remove</button><button class="btn btn-sm btn-amber" onclick="openReportForId('${e.id}')">Report Accident</button>`;} return `<div class="equip-card"><div class="equip-card-head"><div><div class="equip-card-icon">${e.icon}</div><div class="equip-name">${e.name}</div><div class="equip-id">${e.id}</div></div><span class="badge ${sClass}"><span class="badge-dot"></span>${sLabel}</span></div><div class="equip-body"><div class="equip-row"><span class="k">Category</span><span class="v">${e.cat}</span></div><div class="equip-row"><span class="k">Rate ($/hour)</span><span class="v">${e.rate}</span></div>${supervisorBadge?`<div style="margin-top:8px">${supervisorBadge}</div>`:''}</div><div class="equip-foot">${foot}</div></div>`;}).join(''); document.getElementById('labAddBtn').style.display=currentRole==='lab'?'':'none'; }
+function filterEquipment(){ renderEquipment(); }
+function filterEquipByStatus(btn,val){ equipFilter=val; document.querySelectorAll('#page-equipment .filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderEquipment(); }
+function openAddEquipModal(){ openModal('addEquipModal'); }
+function addEquipmentSubmit(){ let name=document.getElementById('newEquipName').value; if(!name){toast('Name required','error');return;} let newEquip={id:'EQ'+Date.now(), name, icon:'🔧', cat:document.getElementById('newEquipCat').value, status:document.getElementById('newEquipState').value, rate:document.getElementById('newEquipRate').value||'$0', loc:document.getElementById('newEquipLoc').value||'Lab', cert:document.getElementById('newEquipCert').value}; equipment.push(newEquip); toast('Added','success'); closeModal('addEquipModal'); renderEquipment(); }
+function openUpdateEquipForId(id){ let eq=equipment.find(e=>e.id===id); if(!eq)return; let sel=document.getElementById('updateEquipSelect'); sel.innerHTML=`<option value="${eq.id}">${eq.name}</option>`; document.getElementById('updateEquipState').value=eq.status; window.currentUpdateId=id; openModal('updateEquipModal'); }
+function openUpdateEquipModal(){ let sel=document.getElementById('updateEquipSelect'); sel.innerHTML=equipment.map(e=>`<option value="${e.id}">${e.name}</option>`).join(''); if(sel.options.length) window.currentUpdateId=sel.value; openModal('updateEquipModal'); }
+function updateEquipmentSubmit(){ let id=document.getElementById('updateEquipSelect').value; let eq=equipment.find(e=>e.id===id); if(eq){ eq.status=document.getElementById('updateEquipState').value; toast('Updated','success'); closeModal('updateEquipModal'); renderEquipment(); renderHome(); } }
+function removeEquipmentSubmit(){ let id=document.getElementById('updateEquipSelect').value; equipment=equipment.filter(e=>e.id!==id); toast('Removed','error'); closeModal('updateEquipModal'); renderEquipment(); renderHome(); }
+function removeEquipmentById(id){ equipment=equipment.filter(e=>e.id!==id); toast('Removed','error'); renderEquipment(); renderHome(); }
+function openMaintForId(id){ window.maintId=id; openModal('maintModal'); }
+function scheduleMaintenance(){ let eq=equipment.find(e=>e.id===window.maintId); if(eq){ eq.status='maintenance'; toast('Maintenance scheduled','success'); renderEquipment(); } closeModal('maintModal'); }
+function openReportForId(id){ window.reportId=id; openModal('reportAccidentModal'); }
+function reportAccidentSubmit(){ let eq=equipment.find(e=>e.id===window.reportId); if(eq){ eq.status='maintenance'; toast('Accident reported','warn'); renderEquipment(); } closeModal('reportAccidentModal'); }
+function openReportAccidentForCurrent(){ toast('Use equipment card','info'); }
+function openNewResForEquip(name){ let sel=document.getElementById('newResEquipSelect'); sel.innerHTML=`<option>${name}</option>`; openModal('newResModal'); }
+function submitNewReservation(){ let equip=document.getElementById('newResEquipSelect').value; let grant=document.getElementById('newResGrantSelect').value; let date=document.getElementById('newResDate').value||new Date().toLocaleDateString(); let start=document.getElementById('newResStart').value; let end=document.getElementById('newResEnd').value; let newRes={id:'R'+Date.now(), equip, researcher:currentUser.name, date, time:`${start}–${end}`, grant, cost:'$300', status:'pending', statusClass:'by', statusStr:'pending'}; reservations.push(newRes); toast('Reservation submitted','info'); closeModal('newResModal'); renderReservations(); renderHome(); }
+function openNewResModal(){ openModal('newResModal'); }
+
+// ---------- RESERVATIONS ----------
+function renderReservations(){ let q=document.getElementById('resSearch')?.value.toLowerCase()||''; let filtered=reservations.filter(r=>(resFilter==='all'||r.statusStr===resFilter)&&(!q||r.equip.toLowerCase().includes(q))); let tbody=document.getElementById('resTableBody'); let empty=document.getElementById('resEmpty'); if(!tbody)return; if(filtered.length===0){empty.style.display='';tbody.innerHTML='';return;} empty.style.display='none'; tbody.innerHTML=filtered.map(r=>`<tr><td class="bold">${r.equip}<\/td><td>${r.date}<\/td><td>${r.time}<\/td><td><span class="badge ${r.grantClass||'bb'}">${r.grant}<\/span><\/td><td>${r.cost}<\/td><td><span class="badge ${r.statusClass||'bg'}"><span class="badge-dot"><\/span>${r.status}<\/span><\/td><td><button class="btn btn-xs btn-ghost" onclick="viewReservationDetail('${r.id}')">View<\/button><\/td><\/tr>`).join(''); }
+function filterRes(){ renderReservations(); }
+function filterResByStatus(btn,val){ resFilter=val; document.querySelectorAll('#page-reservations .filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderReservations(); }
+function viewReservationDetail(id){ 
+  let r=reservations.find(res=>res.id===id);
+  if(!r) return toast('Reservation not found','error');
+  let modal=document.getElementById('viewReservationModal');
+  document.getElementById('vrEquip').innerText=r.equip;
+  document.getElementById('vrResearcher').innerText=r.researcher;
+  document.getElementById('vrDate').innerText=r.date;
+  document.getElementById('vrTime').innerText=r.time;
+  document.getElementById('vrGrant').innerText=r.grant;
+  document.getElementById('vrCost').innerText=r.cost;
+  document.getElementById('vrStatus').innerHTML=`<span class="badge ${r.statusClass||'bg'}"><span class="badge-dot"></span>${r.status}</span>`;
+  window.viewingResId=id;
+  
+  // Show supervisor info for lab manager if equipment requires supervisor
+  let supervisorDiv=document.getElementById('vrSupervisorDiv');
+  if(currentRole==='lab'){
+    let eq=equipment.find(e=>e.name===r.equip);
+    if(eq && eq.supervisor){
+      supervisorDiv.style.display='';
+      document.getElementById('vrSupervisor').innerText='Dr. Sara Hassan';
+    } else {
+      supervisorDiv.style.display='none';
+    }
+  } else {
+    supervisorDiv.style.display='none';
+  }
+  
+  let actionBar=document.getElementById('vrActionBar');
+  if(currentRole==='pi' && r.status==='pending'){
+    actionBar.innerHTML=`<button class="btn btn-ghost" onclick="closeModal('viewReservationModal')">Close</button>
+      <button class="btn btn-red btn-sm" onclick="piRejectReservation('${id}')">✕ Refuse</button>
+      <button class="btn btn-green btn-sm" onclick="piApproveFromView('${id}')">✓ Approve</button>`;
+  } else if(currentRole==='pi' && r.status==='confirmed'){
+    actionBar.innerHTML=`<button class="btn btn-ghost" onclick="closeModal('viewReservationModal')">Close</button>
+      <button class="btn btn-red btn-sm" onclick="piRejectReservation('${id}')">Revoke Approval</button>`;
+  } else {
+    actionBar.innerHTML=`<button class="btn btn-accent" onclick="closeModal('viewReservationModal')">Close</button>`;
+  }
+  openModal('viewReservationModal');
+}
+function piApproveFromView(id){
+  let r=reservations.find(res=>res.id===id);
+  if(!r) return;
+  let actionBar=document.getElementById('vrActionBar');
+  actionBar.innerHTML=`<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:13px;padding:8px 0"><span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Processing approval...</div>`;
+  let prompt=`You are a research lab management system. A Principal Investigator has just approved a reservation. Generate a brief official approval notification (2-3 sentences) to send to the researcher. Details:\n- Equipment: ${r.equip}\n- Researcher: ${r.researcher}\n- Date: ${r.date}\n- Time: ${r.time}\n- Grant: ${r.grant}\n- Cost: ${r.cost}\nRespond with only the notification message.`;
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})})
+  .then(res=>res.json())
+  .then(data=>{
+    let text=data.content?data.content.filter(c=>c.type==='text').map(c=>c.text).join(''):'Your reservation has been approved.';
+    r.status='confirmed'; r.statusClass='bg'; r.statusStr='confirmed';
+    r.piNote=text;
+    document.getElementById('vrStatus').innerHTML=`<span class="badge bg"><span class="badge-dot"></span>confirmed</span>`;
+    actionBar.innerHTML=`<div style="background:var(--green-soft);border:1px solid #a7f3d0;border-radius:var(--radius);padding:12px;font-size:13px;color:var(--text2);margin-bottom:10px;width:100%"><div style="font-weight:600;margin-bottom:5px;color:var(--green)">✓ Approved — Notification Sent</div><div style="line-height:1.6">${text}</div></div><button class="btn btn-accent" onclick="closeModal('viewReservationModal');renderReservations();renderHome();">Close</button>`;
+    toast('Reservation approved','success');
+  })
+  .catch(()=>{
+    r.status='confirmed'; r.statusClass='bg'; r.statusStr='confirmed';
+    actionBar.innerHTML=`<div class="alert alert-success" style="width:100%">✓ Reservation approved successfully.</div><button class="btn btn-accent" onclick="closeModal('viewReservationModal');renderReservations();renderHome();">Close</button>`;
+    toast('Reservation approved','success');
+  });
+}
+function piRejectReservation(id){
+  let r=reservations.find(res=>res.id===id);
+  if(!r) return;
+  let actionBar=document.getElementById('vrActionBar');
+  actionBar.innerHTML=`<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:13px;padding:8px 0"><span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Processing refusal...</div>`;
+  let prompt=`You are a research lab management system. A Principal Investigator has just refused a reservation. Generate a brief official refusal notification (2-3 sentences) to send to the researcher. Details:\n- Equipment: ${r.equip}\n- Researcher: ${r.researcher}\n- Date: ${r.date}\n- Time: ${r.time}\n- Grant: ${r.grant}\nRespond with only the notification message.`;
+  fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})})
+  .then(res=>res.json())
+  .then(data=>{
+    let text=data.content?data.content.filter(c=>c.type==='text').map(c=>c.text).join(''):'Your reservation has been refused.';
+    r.status='rejected'; r.statusClass='br'; r.statusStr='rejected';
+    r.piNote=text;
+    document.getElementById('vrStatus').innerHTML=`<span class="badge br"><span class="badge-dot"></span>rejected</span>`;
+    actionBar.innerHTML=`<div style="background:var(--red-soft);border:1px solid #fecaca;border-radius:var(--radius);padding:12px;font-size:13px;color:var(--text2);margin-bottom:10px;width:100%"><div style="font-weight:600;margin-bottom:5px;color:var(--red)">✕ Refused — Notification Sent</div><div style="line-height:1.6">${text}</div></div><button class="btn btn-accent" onclick="closeModal('viewReservationModal');renderReservations();renderHome();">Close</button>`;
+    toast('Reservation refused','error');
+  })
+  .catch(()=>{
+    r.status='rejected'; r.statusClass='br'; r.statusStr='rejected';
+    actionBar.innerHTML=`<div class="alert alert-danger" style="width:100%">✕ Reservation refused.</div><button class="btn btn-accent" onclick="closeModal('viewReservationModal');renderReservations();renderHome();">Close</button>`;
+    toast('Reservation refused','error');
+  });
+}
+
+// ---------- PROJECTS ----------
+function renderProjects(){ let tbody=document.getElementById('projectsTableBody'); if(tbody) tbody.innerHTML=projects.map(p=>`<tr><td class="bold">${p.name}<\/td><td>${p.pi}<\/td><td><span class="badge bb">${p.grantId}<\/span><\/td><td>$${p.budget.toLocaleString()}<\/td><td><button class="btn btn-xs btn-ghost" onclick="openAssignGrantForProject('${p.name}')">Edit<\/button><\/td><\/tr>`).join(''); let barsDiv=document.getElementById('budgetAllocationBars'); if(barsDiv){ let usage=grants.map(g=>({label:g.id, percent:(g.used/g.total)*100, color:(g.used/g.total)>0.8?'var(--red)':'var(--accent)'})); barsDiv.innerHTML=usage.map(u=>`<div class="bar-row"><div class="bar-label">${u.label}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.min(u.percent,100)}%;background:${u.color}"><span>${Math.round(u.percent)}%</span></div></div></div>`).join(''); } }
+function openAssignGrantModal(){ openModal('assignGrantModal'); }
+function assignGrantToProjectSubmit(){ let proj=document.getElementById('assignGrantProjectSelect').value; let percentage=document.getElementById('assignGrantBudget').value; if(percentage && proj){ let p=projects.find(p=>p.name===proj); if(p){ p.allocation=percentage+'%'; toast(`Grant allocation ${percentage}% assigned to ${proj}`,'success'); renderProjects(); } } closeModal('assignGrantModal'); }
+function openAssignGrantForProject(name){ let sel=document.getElementById('assignGrantProjectSelect'); sel.innerHTML=`<option>${name}</option>`; openModal('assignGrantModal'); }
+function openNewProjectModal(){ openModal('newProjectModal'); }
+function createNewProject(){ let name=document.getElementById('newProjectName').value; let pi=document.getElementById('newProjectPi').value; if(name&&pi){ projects.push({name,pi,grantId:'',budget:0}); toast('Project created','success'); closeModal('newProjectModal'); renderProjects(); } else toast('Name and PI required','error'); }
+function openAssignBudgetModal(){ openModal('assignBudgetModal'); }
+function assignBudgetSubmit(){ let grantId=document.getElementById('assignBudgetGrantSelect').value; let amount=parseInt(document.getElementById('assignBudgetTotal').value); let g=grants.find(g=>g.id===grantId); if(g&&amount){ g.total+=amount; g.remaining+=amount; toast('Budget assigned','success'); renderProjects(); } closeModal('assignBudgetModal'); }
+
+// ---------- USERS (Admin) ----------
+function renderUsers(){ if(currentRole!=='admin'){ document.getElementById('usersMain').innerHTML='<div class="card">Restricted</div>'; return; } let q=document.getElementById('userSearch')?.value.toLowerCase()||''; let filtered=users.filter(u=>u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q)||u.role.includes(q)); let tbody=document.getElementById('usersTableBody'); let empty=document.getElementById('usersEmpty'); if(!tbody)return; if(filtered.length===0){empty.style.display='';tbody.innerHTML='';return;} empty.style.display='none'; tbody.innerHTML=filtered.map(u=>`<tr><td><div class="bold">${u.name}</div><div style="font-size:11px">${u.email}</div><\/td><td><span class="badge bb">${u.role}<\/span><\/td><td>${u.department||''}<\/td><td><span class="badge ${u.status==='Active'?'bg':'br'}">${u.status}<\/span><\/td><td>Today<\/td><td><div class="btn-group"><button class="btn btn-sm btn-ghost" onclick="openEditUserForId('${u.id}')">Edit</button><button class="btn btn-sm btn-red" onclick="deleteUserById('${u.id}')">Delete</button><\/div><\/td><\/tr>`).join(''); }
+function filterUsers(){ renderUsers(); }
+function openAddUserModal(){ openModal('addUserModal'); }
+function addUserSubmit(){ let first=document.getElementById('addUserFirst').value; let last=document.getElementById('addUserLast').value; let email=document.getElementById('addUserEmail').value; let role=document.getElementById('addUserRole').value; if(first&&last&&email){ let staffId=role==='researcher'?'RES-'+Math.floor(Math.random()*10000):'STAFF-'+Math.floor(Math.random()*10000); users.push({ id:'U'+Date.now(), name:`${first} ${last}`, email, role, department:document.getElementById('addUserDept').value, status:'Active', credits:0, certs:[], phone:'', staffId }); toast('User added','success'); closeModal('addUserModal'); renderUsers(); } else toast('Fill all fields','error'); }
+function openEditUserForId(id){ let u=users.find(u=>u.id===id); if(u){ document.getElementById('editUserName').value=u.name; document.getElementById('editUserEmail').value=u.email; document.getElementById('editUserRole').value=u.role; document.getElementById('editUserStatus').value=u.status; window.editUserId=id; openModal('editUserModal'); } }
+function updateUserSubmit(){ let u=users.find(u=>u.id===window.editUserId); if(u){ u.name=document.getElementById('editUserName').value; u.email=document.getElementById('editUserEmail').value; u.role=document.getElementById('editUserRole').value; u.status=document.getElementById('editUserStatus').value; toast('User updated','success'); closeModal('editUserModal'); renderUsers(); } }
+function deleteUserById(id){ users=users.filter(u=>u.id!==id); toast('User deleted','error'); renderUsers(); }
+function openIssueCreditModal(){ let sel=document.getElementById('creditResearcherSelect'); sel.innerHTML=users.filter(u=>u.role==='researcher').map(u=>`<option value="${u.id}">${u.name}</option>`).join(''); openModal('issueCreditModal'); }
+function issueCreditSubmit(){ let id=document.getElementById('creditResearcherSelect').value; let amount=parseInt(document.getElementById('creditAmount').value); let u=users.find(u=>u.id===id); if(u&&amount){ u.credits+=amount; toast(`Issued $${amount} to ${u.name}`,'success'); closeModal('issueCreditModal'); } else toast('Invalid','error'); }
+
+// ---------- ASSIGNMENTS ----------
+function renderAssignments(){ 
+  let projSel=document.getElementById('assignProjectSelect'); 
+  let resSel=document.getElementById('assignResearcherSelect'); 
+  if(projSel) projSel.innerHTML=projects.map(p=>`<option value="${p.name}">${p.name}</option>`).join(''); 
+  if(resSel) resSel.innerHTML=users.filter(u=>u.role==='researcher').map(u=>`<option value="${u.name}">${u.name} (${u.department||'General'})</option>`).join(''); 
+  renderMyAssignmentsTable();
+}
+function renderMyAssignmentsTable(){
+  let myBody=document.getElementById('myAssignmentsBody'); 
+  if(myBody){ 
+    let myAssigns=assignments.filter(a=>a.supervisor===currentUser?.name); 
+    if(myAssigns.length===0){ myBody.innerHTML=`<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text3)">No assignments yet.</td></tr>`; return; }
+    myBody.innerHTML=myAssigns.map(a=>`<tr>
+      <td class="bold">${a.project}</td>
+      <td><div style="font-size:11px;color:var(--text3)">${a.researchers.join(', ')}</div></td>
+      <td><span class="badge ${a.status==='pending'?'by':'bg'}"><span class="badge-dot"></span>${a.status}</span></td>
+      <td>${a.status==='pending'?`<div class="btn-group"><button class="btn btn-xs btn-green" onclick="openAssignAccept('${a.id}')">Accept</button><button class="btn btn-xs btn-red" onclick="declineAssignmentById('${a.id}')">Decline</button></div>`:'<span style="color:var(--green);font-size:12px">✓ Active</span>'}</td>
+    </tr>`).join(''); 
+  } 
+}
+function assignResearcherToProject(){ 
+  let proj=document.getElementById('assignProjectSelect').value; 
+  let res=document.getElementById('assignResearcherSelect').value; 
+  let role=document.getElementById('assignRoleSelect').value;
+  if(!proj||!res){toast('Select project and researcher','error');return;}
+  let existing=assignments.find(a=>a.project===proj&&a.supervisor===currentUser?.name);
+  if(existing){
+    if(!existing.researchers.includes(res)){ existing.researchers.push(res); toast(`Added ${res} to ${proj}`,'success'); }
+    else { toast(`${res} is already on this project`,'warn'); return; }
+  } else {
+    assignments.push({id:'A'+Date.now(), project:proj, supervisor:currentUser?.name||'Supervisor', status:'pending', researchers:[res], role});
+    toast(`Created assignment: ${res} → ${proj}`,'success');
+  }
+  renderAssignments();
+  renderSupervisorHome();
+}
+
+// ---------- ANALYTICS ----------
+function renderAnalytics(){ let utilization=Math.round((equipment.filter(e=>e.status==='in-use').length/equipment.length)*100)||0; document.getElementById('analyticsUtil').innerText=utilization+'%'; document.getElementById('analyticsActiveEq').innerText=equipment.filter(e=>e.status!=='maintenance').length; let revenue=receipts.filter(r=>r.confirmed).reduce((s,r)=>s+(r.amount||0),0); document.getElementById('analyticsRevenue').innerHTML=`$${revenue}`; document.getElementById('analyticsResearchers').innerText=users.filter(u=>u.role==='researcher'&&u.status==='Active').length; let bars=[{label:'Confocal Scope A',width:94},{label:'DNA Sequencer X1',width:87},{label:'GPU Cluster',width:82},{label:'Electron Scope B2',width:71}]; let barsDiv=document.getElementById('analyticsBars'); if(barsDiv) barsDiv.innerHTML=bars.map(b=>`<div class="bar-row"><div class="bar-label">${b.label}</div><div class="bar-track"><div class="bar-fill" style="width:${b.width}%;background:var(--accent)"><span>${b.width}%</span></div></div></div>`).join(''); }
+
+function renderProfile(){ 
+  let html=`<div class="profile-hero"><div class="profile-av">${currentUser.name[0]}</div><div><div class="profile-name">${currentUser.name}</div><div class="profile-meta">${currentRole.charAt(0).toUpperCase()+currentRole.slice(1)}</div></div></div>
+  <div class="card"><div class="card-title">Personal Information</div>
+    <div class="form-group"><label>Full Name</label><input id="profileFullName" value="${currentUser.name}"></div>
+    <div class="form-group"><label>Username</label><input id="profileUsername" value="${currentUser.username||''}" placeholder="Enter your username"></div>
+    <div class="form-group"><label>Email</label><input id="profileEmail" value="${currentUser.email}" readonly></div>
+    <div class="form-group"><label>Staff/Researcher ID</label><input id="profileStaffId" value="${currentUser.staffId||''}" readonly class="mono"></div>
+    <button class="btn btn-accent btn-sm" onclick="saveProfileDetails()">Save Changes</button>
+  </div>`;
+  if(currentRole==='researcher'||currentRole==='supervisor'){ 
+    html+=`<div class="card"><div class="card-title">Certifications</div><div class="form-group"><label>Select Certifications</label><select id="certSelect"><option>-- Select a certification --</option><option>BSL-2 Safety</option><option>Radiation Safety</option><option>DNA Sequencer Cert.</option><option>Confocal Microscopy</option><option>Mass Spectrometry</option></select></div><button class="btn btn-accent btn-sm" onclick="addCertificationFromProfile()">Add Certification</button><div id="userCertsList" style="margin-top:12px">${(currentUser.certs||[]).map(c=>`<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--green-soft);border-radius:var(--radius);margin-bottom:6px"><span style="color:var(--green)">✓</span><span style="color:var(--green)">${c}</span></div>`).join('')}</div></div>`; 
+  }
+  if(currentRole==='researcher'){
+    html+=`<div class="card"><div class="card-title">Project Assignment</div><div class="form-group"><label>Current Project</label><select id="projectSelect"><option>-- Select a project --</option><option>Protein Study 2024</option><option>DNA Sequencing Analysis</option><option>Materials Research</option><option>Quantum Computing</option></select></div></div>`;
+  }
+  if(currentRole==='financial'){
+    let grantBars = grants.map(g=>{let pct=Math.round((g.used/g.total)*100); let color=pct>85?'var(--red)':pct>60?'var(--amber)':'var(--green)'; return `<div class="bar-row" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;margin-bottom:5px"><span class="bar-label" style="width:auto;font-weight:600">${g.id}</span><span style="font-size:11px;color:var(--text3)">${pct}% used · Expires ${g.expires}</span></div><div class="bar-track" style="height:20px"><div class="bar-fill" style="width:${Math.min(pct,100)}%;background:${color}"><span>${pct}%</span></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:3px"><span>Used: $${g.used.toLocaleString()}</span><span>Remaining: $${g.remaining.toLocaleString()}</span><span>Total: $${g.total.toLocaleString()}</span></div></div>`;}).join('');
+    html+=`<div class="card" style="margin-top:14px">
+      <div class="card-title">Budget Management</div>
+      <div class="card-sub">Assign and track budgets across all grants</div>
+      <div style="margin:14px 0">${grantBars}</div>
+      <button class="btn btn-accent btn-sm" onclick="openAssignBudgetModal()">Assign Budget</button>
+    </div>`;
+  }
+  document.getElementById('profileDynamicContent').innerHTML=html; 
+}
+function saveProfileDetails(){ 
+  let newName=document.getElementById('profileFullName').value; 
+  let newUsername=document.getElementById('profileUsername').value;
+  if(newName) currentUser.name=newName; 
+  if(newUsername) currentUser.username=newUsername;
+  toast('Profile updated','success'); 
+  renderProfile(); 
+  document.getElementById('profName').innerText=currentUser.name; 
+  document.getElementById('profAv').innerText=currentUser.name[0]; 
+  document.getElementById('avatarEl').innerText=currentUser.name[0]; 
+  document.getElementById('profMeta').innerText=currentRole.charAt(0).toUpperCase()+currentRole.slice(1); 
+}
+function uploadCertificateFromProfile(){ 
+  let cert=document.getElementById('certInput').value; 
+  if(cert&&currentUser){ 
+    if(!currentUser.certs) currentUser.certs=[]; 
+    currentUser.certs.push(cert); 
+    toast('Certificate added','success'); 
+    renderProfile(); 
+  } else toast('Enter certificate name','error'); 
+}
+function addCertificationFromProfile(){ 
+  let cert=document.getElementById('certSelect').value; 
+  if(cert && cert !== '-- Select a certification --' && currentUser){ 
+    if(!currentUser.certs) currentUser.certs=[]; 
+    if(!currentUser.certs.includes(cert)) {
+      currentUser.certs.push(cert); 
+      toast('Certification added','success'); 
+      renderProfile(); 
+    } else {
+      toast('Already have this certification','warn');
+    }
+  } else toast('Select a certification','error'); 
+}
+// New functions for modal-based editing (interactive)
+function openEditProfileModal() {
+  document.getElementById('editProfileName').value = currentUser.name;
+  document.getElementById('editProfileDepartment').value = currentUser.department || 'General';
+  document.getElementById('editProfilePhone').value = currentUser.phone || '';
+  openModal('editProfileModal');
+}
+function saveProfileFromModal() {
+  let newName = document.getElementById('editProfileName').value;
+  let newDept = document.getElementById('editProfileDepartment').value;
+  let newPhone = document.getElementById('editProfilePhone').value;
+  if(newName) currentUser.name = newName;
+  if(newDept) currentUser.department = newDept;
+  if(newPhone) currentUser.phone = newPhone;
+  toast('Profile updated via modal','success');
+  closeModal('editProfileModal');
+  renderProfile(); // refresh the profile page to show updated inline fields and hero
+  document.getElementById('profName').innerText = currentUser.name;
+  document.getElementById('profAv').innerText = currentUser.name[0];
+  document.getElementById('avatarEl').innerText = currentUser.name[0];
+  document.getElementById('profMeta').innerText = (currentRole.charAt(0).toUpperCase()+currentRole.slice(1)) + ' — ' + (currentUser.department || 'University');
+  // Also update the inline form fields (they are recreated by renderProfile)
+}
+// Keep old editProfile function? It was calling saveProfileDetails, but now we have openEditProfileModal.
+// We'll replace the button's onclick with openEditProfileModal already done in HTML.
+// No need to keep editProfile, but we'll keep for compatibility (not used).
+function editProfile() { openEditProfileModal(); }
+
+// ---------- SESSION & RECEIPT ACTIONS ----------
+function openStartSessionModal(){ let sel=document.getElementById('startEquipSelect'); sel.innerHTML=equipment.filter(e=>e.status==='available').map(e=>`<option>${e.name}</option>`).join(''); openModal('startModal'); }
+function startSessionSubmit(){ let equipName=document.getElementById('startEquipSelect').value; let grant=document.getElementById('startGrantSelect').value; let eq=equipment.find(e=>e.name===equipName); if(!eq||eq.status!=='available'){toast('Not available','error');return;} sessions.push({id:Date.now(),researcher:currentUser.name,equipment:equipName,startTime:new Date(),endTime:null,grant:grant,cost:eq.rate}); eq.status='in-use'; toast(`Started ${equipName}`,'success'); closeModal('startModal'); renderEquipment(); renderHome(); }
+function openCheckinModal(){ openModal('checkinModal'); }
+function checkinSubmit(){ let active=sessions.find(s=>s.researcher===currentUser.name&&!s.endTime); if(!active){toast('No active session','error');closeModal('checkinModal');return;} active.endTime=new Date(); let eq=equipment.find(e=>e.name===active.equipment); if(eq) eq.status='available'; let amount=parseInt(active.cost)||100; receipts.push({id:Date.now(),sessionId:active.id,amount:amount,grant:active.grant,confirmed:false}); toast('Checked in','success'); closeModal('checkinModal'); renderEquipment(); renderHome(); }
+function openLinkPaperModal(){ openModal('linkPaperModal'); }
+function linkPaperSubmit(){ let title=document.getElementById('paperTitle').value; let doi=document.getElementById('paperDoi').value; if(title&&doi){ linkedPapers.push({id:Date.now(),title,doi,researcher:currentUser.name}); toast('Paper linked','success'); closeModal('linkPaperModal'); renderHome(); } else toast('Title and DOI required','error'); }
+function openConfirmReceiptModal(){ 
+  let pending=receipts.filter(r=>!r.confirmed); 
+  let sel=document.getElementById('receiptSessionSelect'); 
+  sel.innerHTML=pending.length>0?pending.map(r=>`<option value="${r.id}">Session ${r.sessionId} - $${r.amount}</option>`).join(''):'<option value="">No pending receipts</option>'; 
+  if(pending[0]){ 
+    document.getElementById('receiptAmount').value='$'+pending[0].amount; 
+    document.getElementById('receiptGrant').value=pending[0].grant; 
+  } else {
+    document.getElementById('receiptAmount').value='';
+    document.getElementById('receiptGrant').value='';
+  }
+  document.getElementById('receiptConfirmResult').innerHTML='';
+  document.getElementById('receiptConfirmResult').style.display='none';
+  let aiDiv=document.getElementById('receiptAiAnalysis');
+  aiDiv.innerHTML=''; aiDiv.style.display='none';
+  openModal('confirmReceiptModal'); 
+}
+function updateReceiptDetails(){
+  let id=parseInt(document.getElementById('receiptSessionSelect').value);
+  let rec=receipts.find(r=>r.id===id);
+  if(rec){
+    document.getElementById('receiptAmount').value='$'+rec.amount;
+    document.getElementById('receiptGrant').value=rec.grant;
+  }
+  let aiDiv=document.getElementById('receiptAiAnalysis');
+  aiDiv.innerHTML=''; aiDiv.style.display='none';
+}
+async function analyzeReceiptWithAI(){ /* removed */ }
+async function confirmReceiptSubmit(){
+  let id=parseInt(document.getElementById('receiptSessionSelect').value);
+  let rec=receipts.find(r=>r.id===id);
+  if(!rec){toast('No receipt selected','error');return;}
+  let session=sessions.find(s=>s.id===rec.sessionId);
+  let aiDiv=document.getElementById('receiptAiAnalysis');
+  aiDiv.style.display='block';
+  aiDiv.innerHTML=`<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:13px"><span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Processing confirmation with server...</div>`;
+  let confirmBtn=document.querySelector('#confirmReceiptModal .btn-green');
+  if(confirmBtn) confirmBtn.disabled=true;
+  let prompt=`You are a research lab billing system. A researcher has just confirmed a receipt. Generate a brief official confirmation note (2-3 sentences) acknowledging the confirmation. Details:\n- Amount: $${rec.amount}\n- Grant: ${rec.grant}\n- Session ID: ${rec.sessionId}\n${session?`- Equipment: ${session.equipment}\n- Researcher: ${session.researcher}`:''}\nRespond with a professional confirmation message only.`;
+  try{
+    let response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    let data=await response.json();
+    let text=data.content?data.content.filter(c=>c.type==='text').map(c=>c.text).join(''):'Confirmation processed.';
+    rec.confirmed=true;
+    rec.confirmationNote=text;
+    aiDiv.innerHTML=`<div style="background:var(--green-soft);border:1px solid #a7f3d0;border-radius:var(--radius);padding:12px;font-size:13px;color:var(--text2)"><div style="font-weight:600;margin-bottom:6px;color:var(--green)">✓ Receipt Confirmed</div><div style="line-height:1.6">${text}</div></div>`;
+    toast('Receipt confirmed','success');
+    setTimeout(()=>{closeModal('confirmReceiptModal'); renderHome();},2200);
+  }catch(e){
+    rec.confirmed=true;
+    aiDiv.innerHTML=`<div class="alert alert-success">✓ Receipt confirmed successfully.</div>`;
+    toast('Receipt confirmed','success');
+    setTimeout(()=>{closeModal('confirmReceiptModal'); renderHome();},1500);
+  }finally{
+    if(confirmBtn) confirmBtn.disabled=false;
+  }
+}
+function openChallengeBillModal(){ let confirmed=receipts.filter(r=>r.confirmed); let sel=document.getElementById('challengeSessionSelect'); sel.innerHTML=confirmed.map(r=>`<option value="${r.id}">Session ${r.sessionId} - $${r.amount}</option>`).join(''); openModal('challengeBillModal'); }
+function submitChallenge(){ let id=parseInt(document.getElementById('challengeSessionSelect').value); let reason=document.getElementById('challengeReason').value; let details=document.getElementById('challengeDetails').value; disputes.push({id:Date.now(),receiptId:id,reason,details,status:'pending'}); toast('Challenge submitted','warn'); closeModal('challengeBillModal'); }
+function openMaintModal(){ openModal('maintModal'); }
+function viewReservation(id){ toast('Reservation details','info'); }
+
+window.onload = () => {
+  if(document.getElementById('paperEquipSelect')) document.getElementById('paperEquipSelect').innerHTML=equipment.map(e=>`<option>${e.name}</option>`).join('');
+  if(document.getElementById('newProjectPi')) document.getElementById('newProjectPi').innerHTML=users.filter(u=>u.role==='pi').map(u=>`<option>${u.name}</option>`).join('');
+  if(document.getElementById('assignGrantProjectSelect')) document.getElementById('assignGrantProjectSelect').innerHTML=projects.map(p=>`<option>${p.name}</option>`).join('');
+  if(document.getElementById('profileDepartment') && currentUser && currentUser.department) document.getElementById('profileDepartment').value=currentUser.department;
+};
+</script>
+</body>
+</html>
