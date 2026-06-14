@@ -52,8 +52,7 @@ public class WebApplication
         middlewarePipeline = new();
         middlewarePipeline.Add(new ExceptionMiddleware());
         middlewarePipeline.Add(new RoutingMiddleware(this));
-        middlewarePipeline.Add(new EndpointMiddleware());
-        _compiledPipeline = BuildPipeline();
+        MapMethod(HttpMethod.Get, "/favicon.ico", async ctx => { ctx.Response.Ok(); });
     }
     public bool TryGetEndpoint(HttpMethod method , string pattern , 
         out RequestDelegate endpoint , 
@@ -74,6 +73,12 @@ public class WebApplication
     public void UseMiddleware(IMiddleware middleware)
     {
         middlewarePipeline.Add(middleware);
+    }
+
+    public void Run()
+    {
+        middlewarePipeline.Add(new EndpointMiddleware());
+        _compiledPipeline = BuildPipeline();
     }
 
     public async Task HandleRequest(HttpContext context)

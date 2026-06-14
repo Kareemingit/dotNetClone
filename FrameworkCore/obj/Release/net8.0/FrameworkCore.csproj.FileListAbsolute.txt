@@ -1,0 +1,13 @@
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\bin\Release\net8.0\FrameworkCore.deps.json
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\bin\Release\net8.0\FrameworkCore.runtimeconfig.json
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\bin\Release\net8.0\FrameworkCore.dll
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\bin\Release\net8.0\FrameworkCore.pdb
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\FrameworkCore.GeneratedMSBuildEditorConfig.editorconfig
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\FrameworkCore.AssemblyInfoInputs.cache
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\FrameworkCore.AssemblyInfo.cs
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\FrameworkCore.csproj.CoreCompileInputs.cache
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\FrameworkCore.dll
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\refint\FrameworkCore.dll
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\FrameworkCore.pdb
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\FrameworkCore.genruntimeconfig.cache
+D:\01 Kareem\programing projects\DotNetCloneFramework\dotnetClone\FrameworkCore\obj\Release\net8.0\ref\FrameworkCore.dll

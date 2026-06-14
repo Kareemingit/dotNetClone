@@ -17,6 +17,7 @@ public static class Program
         app.MapGet("/user/{id}", async ctx => UserController.show(ctx));
         app.MapPost("/user", async ctx => UserController.add(ctx));
         app.MapGet("/users" , async ctx => UserController.showAll(ctx));
+        app.Run();
         return app;
     }
 }

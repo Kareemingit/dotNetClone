@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using static System.Net.Mime.MediaTypeNames;
 namespace FrameworkCore.Http;
 
 public unsafe class Response
@@ -69,8 +70,14 @@ public unsafe class Response
 
     public void File(string filePath)
     {
-        string baseDir = Directory.GetCurrentDirectory().Replace("Engine" , "FrameworkCore\\UserApplication");
-        
+        string baseDir = Directory.GetCurrentDirectory();
+        string stopAt = "dotnetClone";
+        int index = baseDir.IndexOf(stopAt);
+
+        if (index != -1)
+        {
+            baseDir = baseDir.Substring(0, index + stopAt.Length) + "\\FrameworkCore\\UserApplication";
+        }
         string fullPath = Path.Combine(baseDir, filePath);
         
         if (!System.IO.File.Exists(fullPath))
