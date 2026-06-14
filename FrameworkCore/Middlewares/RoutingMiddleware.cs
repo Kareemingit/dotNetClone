@@ -27,5 +27,6 @@ public class RoutingMiddleware : IMiddleware
             }
         }
         await next(context);
+        context.Response.SetHeader("Server", "Kira");
     }
 }

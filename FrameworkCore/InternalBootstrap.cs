@@ -11,7 +11,7 @@ class UserTest
 }
 public static unsafe class InternalBootstrap
 {
-    private static WebApplication? _app;
+    internal static WebApplication? _app;
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate void ResponseCallbackDelegate(nuint clientSocket, IntPtr responseData , int responseSize);
 
@@ -21,6 +21,14 @@ public static unsafe class InternalBootstrap
     public static void RegisterResponseCallback(IntPtr callbackPtr)
     {
         _cppResponseCallback = Marshal.GetDelegateForFunctionPointer<ResponseCallbackDelegate>(callbackPtr);
+        _app = new WebApplication();
+        _app.MapGet("/" , async ctx => {
+            ctx.Response.Write("Hello From Web Application");
+        });
+        _app.MapGet("/user/{id}", async ctx =>
+        {
+            ctx.Response.Write("User id = " + ctx.Request.RouteValues["id"]);
+        });
         Console.WriteLine("[Framework] Callback registered successfully.");
     }
 
@@ -29,14 +37,6 @@ public static unsafe class InternalBootstrap
     {
         NativeHttpRequest reqNative = Marshal.PtrToStructure<NativeHttpRequest>(dataPtr);
         HttpContext context = new HttpContext(reqNative, rawDataPtr);
-        //Console.WriteLine(context.Request.ToString());
-        //if (context.Request.TryReadJson<UserTest>(out UserTest? userTest))
-        //{
-        //    Console.WriteLine($"Deserialized UserTest: id={userTest?.id}, name={userTest?.name}, username={userTest?.username}");
-        //}
-        //context.Response.Ok();
-        //context.Response.SetHeader("Connection", "close");
-        //context.Response.Write("OK");
         _app!.HandleRequest(context);
         byte[] responseBuffer = ResponseSerializer.SerializeResponse(context.Response);
         fixed (byte* responsePtr = responseBuffer)
@@ -52,9 +52,13 @@ public static unsafe class InternalBootstrap
             _cppResponseCallback(clientSocket, (IntPtr)buffer, bufferSize);
         }
     }
-
-    public static void SetApplication(WebApplication app)
-    {
-        _app = app;
-    }
 }
+
+//Console.WriteLine(context.Request.ToString());
+//if (context.Request.TryReadJson<UserTest>(out UserTest? userTest))
+//{
+//    Console.WriteLine($"Deserialized UserTest: id={userTest?.id}, name={userTest?.name}, username={userTest?.username}");
+//}
+//context.Response.Ok();
+//context.Response.SetHeader("Connection", "close");
+//context.Response.Write("OK");

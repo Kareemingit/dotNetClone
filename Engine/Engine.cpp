@@ -107,7 +107,7 @@ public:
             size_t contentLength = 0;
             const char* contentLengthPtr = strstr(&req->buffer_raw_ptr[0], "Content-Length:");
             if (!contentLengthPtr) {
-                contentLengthPtr = strstr(&req->buffer_raw_ptr[0], "content-length:"); // case-insensitivity
+                contentLengthPtr = strstr(&req->buffer_raw_ptr[0], "content-length:");
             }
             if (contentLengthPtr) {
                 contentLength = strtol(contentLengthPtr + 15, nullptr, 10);
@@ -118,11 +118,9 @@ public:
                 cout << "Headers finished, but waiting for body bytes: "<< client.bytesRead << "/" << totalExpectedBytes << endl;
                 return 2;
             }
-            cout << "Request complete or headers finished." << endl;
             http_request* req = client_request_pointers[client.socket];
             req->client_socket = (uintptr_t)client.socket;
             buffer.requestQueue.enqueue(req);
-            //cout << "[Framework] Request enqueued from socket " << client.socket << endl;
             return 1;
         }
         else {
