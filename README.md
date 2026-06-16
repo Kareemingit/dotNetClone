@@ -20,7 +20,7 @@ The framework is built using a **Layered Architecture with MVC** to achieve high
 
 ## 🛠️ Class Diagrams
 
-![Web Server](web server class.png)
+![Web Server](webServerClass.png)
 
 ![Framework](frameworkClass.png)
 
