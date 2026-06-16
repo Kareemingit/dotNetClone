@@ -32,12 +32,12 @@ The framework is built using a **Layered Architecture with MVC** to achieve high
 You can easily map standard HTTP verbs (GET, POST, PUT, DELETE) to specific logic closures or controller actions using a clean, modern routing system.
 
 ```csharp
-// Program.cs or RouteConfig.cs
+// Program.cs
 app.MapGet("/api/products", async httpContext => {
     httpContext.Response.Json(new { message = "Fetching all products" });
 });
 
-Route.Post("/api/products", async httpContext => {
+app.MapPost("/api/products", async httpContext => {
     var payload = httpContext.Request.GetBody();
     httpContext.Response.Ok();
 });
