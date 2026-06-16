@@ -10,6 +10,7 @@ Built as an advanced systems-engineering project to bridge the gap between low-l
 ## 🏗️ Architecture Overview
 
 The framework is built using a **Layered Architecture with MVC** to achieve high abstraction, strict separation of concerns, and an efficient request/response lifecycle.
+
 ![Framework Architecture](Arch.png)
 
 * **Layer 1 (OS Abstraction):** Bridges the gap between the host operating system and the server, abstracting low-level system calls and platform-specific socket architectures.
