@@ -18,6 +18,12 @@ The framework is built using a **Layered Architecture with MVC** to achieve high
 * **Layer 3 (Interop Layer):** Embeds and hosts the native `.NET Runtime` directly inside the C++ process. It establishes a high-speed execution bridge between unmanaged C++ memory and managed C# memory.
 * **Layer 4 (Framework Core):** Written in C#, this layer provides the application-level logic—including a routing engine, custom middleware support, and the MVC pattern.
 
+## 🛠️ Class Diagrams
+
+![Web Server](web-server-class.png)
+
+![Framework](frameworkClass.png)
+
 ---
 
 ## 🚀 Features & Core Use Cases
@@ -40,7 +46,7 @@ Route.Post("/api/products", async httpContext => {
 ```csharp
 public class AuthMiddleware : IMiddleware
 {
-    public async Task InvokeAsync(HttpContext context, NextDelegate next)
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         if (!context.Request.Headers.ContainsKey("Authorization"))
         {
@@ -51,6 +57,42 @@ public class AuthMiddleware : IMiddleware
 
         // Pass control to the next middleware in the pipeline
         await next(context);
+    }
+}
+```
+### 3. Creating Controllers and Models (MVC)
+Organize your business logic seamlessly using decoupled, highly structured Models and Controllers.
+
+The Model:
+```csharp
+public class User
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string Email { get; set; }
+}
+```
+The Controller:
+```csharp
+public class UserController
+{
+    // GET /users
+    public void Index(httpContext ctx)
+    {
+        List<User> users = UsersList.FetchUsers(); 
+        ctx.Response.Json<UsersList>(users); // Renders clean view templates
+    }
+
+    // GET /api/users/{id}
+    public void GetUser(httpContext ctx)
+    {
+        var id = ctx.Request.RouteValues['id'];
+        User user = UsersList.Find(id);
+        if (user == null) {
+            ctx.Response.NotFound();
+            return;
+        }
+        return Json(user); 
     }
 }
 ```
